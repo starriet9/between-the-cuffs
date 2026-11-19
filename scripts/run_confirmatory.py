@@ -9,9 +9,9 @@ secondary analyses and the gradient-boosting check (§6.6-§6.8) into `<out>/sde
 
 "The first complete S-dev cross-validation run of all of these at the frozen feature tag is the
 confirmatory result" (§9 step 5). On real data this script therefore refuses to run unless HEAD
-carries the given feature tag and no tracked file is modified, and it refuses to overwrite an
-existing confirmatory output. Every result file records the commit (§10). The run is
-deterministic.
+carries the given feature tag and the work tree is clean (untracked files count, as in
+`btc.provenance`), and it refuses to overwrite an existing confirmatory output. Every result file
+records the commit and the git state (§10). The run is deterministic.
 
 `--synthetic` generates synthetic tables (btc/models/synthetic.py) and never reads `--data-dir`.
 """
@@ -61,8 +61,9 @@ def main(argv=None) -> int:
             ap.error("--n-boot and --no-gb are for synthetic tests only (SPEC §6.2, §6.8)")
         if not a.feature_tag:
             ap.error("--feature-tag is required on real data (SPEC §9 step 3)")
-        if a.feature_tag not in g["tags_at_head"] or g["tracked_files_modified"]:
-            ap.error(f"HEAD must carry tag {a.feature_tag!r} with no modified tracked file (SPEC §9 step 5)")
+        if a.feature_tag not in g["tags_at_head"] or g["state"] != "clean":
+            ap.error(f"HEAD must carry tag {a.feature_tag!r} with no modified or untracked file "
+                     "(SPEC §9 step 5)")
         if (out / "sdev" / "confirmatory" / "summary.json").exists():
             ap.error("a confirmatory result already exists; a rerun is a deviation (SPEC §9 step 5): "
                      "write it to another --out-dir and report both")

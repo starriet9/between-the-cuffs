@@ -399,3 +399,69 @@ def make_synthetic(seed: int = 1, wf_signal: float = 0.0, hr_signal: float = 0.0
         sdev_subj[-1] = sdev_subj[len(sdev_subj) // 2]          # one subject with two cases (§2.2)
     return {"sdev": make_cohort(sdev, seed, sdev_ids, sdev_subj),
             "sob": make_cohort(sob, seed + 1, sob_ids, sob_subj)}
+
+
+# ----------------------------------------------------------------------------
+# Signals for the site case files (SPEC §8.1-§8.3; btc/site/series.py)
+# ----------------------------------------------------------------------------
+
+SITE_WINDOW_COLS = ["caseid", "w", "t_start", "t_end", "usable", "usable_strict", *WF_FEATURES]
+
+
+class SyntheticSignals:
+    """Stand-in for the S-ob signals that the site case files need, for synthetic tables only: a heart-
+    rate track (one sample every 2 s, with a gap), a phenylephrine pump track in mL/h for the `pump`
+    stratum, the 10-s pleth window table (btc/SCHEMA.md §4b columns used by `btc.waveform`), and chart
+    totals in µg and mg that agree with `vaso_stratum`. The values are invented and are not linked to
+    the synthetic feature tables, so the exporter does not compare its recomputed features with them
+    (`verify` False). A separate generator leaves `make_synthetic` unchanged."""
+
+    verify = False
+
+    def __init__(self, cases: pd.DataFrame, seed: int = 1):
+        rng = np.random.default_rng(seed + 104729)
+        self._hr, self._pump, self._win, self._chart = {}, {}, {}, {}
+        for r in cases.sort_values("caseid").to_dict("records"):
+            cid = int(r["caseid"])
+            t0 = float(r.get("hr_t_first", 0.0) or 0.0)
+            t = np.arange(t0, float(T_MAX), 2.0)
+            v = 78.0 + _ou(rng, len(t), 150.0, 6.0)
+            g0 = rng.uniform(200, 1500)
+            v[(t >= g0) & (t < g0 + rng.uniform(20, 60))] = np.nan
+            self._hr[cid] = (t, v)
+            p0 = r.get("pleth_t_first", np.nan)
+            if np.isfinite(p0):
+                n = int((3660.0 - p0) // 10)
+                ts = p0 + 10.0 * np.arange(n)
+                use = rng.random(n) < rng.uniform(0.6, 0.97)
+                w = pd.DataFrame({"caseid": cid, "w": np.arange(n), "t_start": ts, "t_end": ts + 10.0,
+                                  "usable": use, "usable_strict": use & (rng.random(n) < 0.9)})
+                for f, (mu, sd) in zip(WF_FEATURES, ((0.65, 0.02), (0.18, 0.02), (0.30, 0.03), (0.08, 0.02))):
+                    w[f] = np.where(use, rng.normal(mu, sd, n), np.nan)
+                self._win[cid] = w[SITE_WINDOW_COLS]
+            stratum = r.get("vaso_stratum", "neither_recorded")
+            if stratum == "pump":
+                k = int(rng.integers(2, 6))
+                pt = np.concatenate([[rng.uniform(30, 200)], np.sort(rng.uniform(250, 2400, k))])
+                pv = np.concatenate([[0.0], rng.choice([15.0, 30.0, 45.0, 60.0], k)])
+                self._pump[cid] = (pt, pv)
+                phe, eph = float(rng.choice([0.0, 100.0])), 0.0
+            elif stratum == "bolus_no_pump":
+                phe, eph = float(rng.choice([0.0, 50.0, 100.0, 200.0])), float(rng.choice([0.0, 5.0, 10.0]))
+                if phe == 0 and eph == 0:
+                    phe = 100.0
+            else:
+                phe, eph = (0.0, 0.0) if rng.random() < 0.5 else (np.nan, np.nan)
+            self._chart[cid] = {"pump_present": cid in self._pump, "phenylephrine_ug": phe, "ephedrine_mg": eph}
+
+    def hr(self, caseid: int):
+        return self._hr[int(caseid)]
+
+    def pump(self, caseid: int):
+        return self._pump.get(int(caseid), (np.zeros(0), np.zeros(0)))
+
+    def windows(self, caseid: int) -> pd.DataFrame:
+        return self._win.get(int(caseid), pd.DataFrame(columns=SITE_WINDOW_COLS))
+
+    def chart(self, caseid: int) -> dict:
+        return dict(self._chart[int(caseid)])

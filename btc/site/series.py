@@ -1,9 +1,11 @@
 """Per-case inputs of the case browser, the summary figure and the replay (SPEC §8.1-§8.3).
 
-The frozen-scoring step (SPEC §9 steps 7-8) writes one folder, here called `<cases-dir>`:
+The frozen-scoring step (SPEC §9 steps 7-8) writes one folder, here called `<cases-dir>`
+(`scripts/run_frozen_scoring.py series`, `btc/models/site_cases.py`):
 
     <cases-dir>/cases.json              one entry per cesarean cohort case, analysable or not
     <cases-dir>/series/<caseid>.json    one file per scored case
+    <cases-dir>/MANIFEST.json           SHA-256 of the files above and their provenance
 
 These files hold VitalDB-derived series. Keep them in a git-ignored folder (for example
 `data/derived/site/`), never in `docs/` or `results/`: the site build turns them into images only,
@@ -11,8 +13,8 @@ so no VitalDB data are redistributed (SPEC §2.1, §8.3).
 
 cases.json
 ----------
-    {"schema": "btc-site-cases/1", "synthetic": false, "cohort": "S-ob",
-     "cases": [<CaseSummary>, ...]}
+    {"schema": "btc-site-cases/1", "synthetic": false, "cohort": "S-ob", "meta": {...},
+     "cases": [<CaseSummary>, ...]}                  (meta: provenance, optional, not read)
 
 CaseSummary (one per cohort case; numbers are the frozen-scoring values):
     caseid              int
@@ -27,7 +29,8 @@ CaseSummary (one per cohort case; numbers are the frozen-scoring values):
     n_forecasts         scored primary forecasts (next-reading targets)
     rmse                {"M2": mmHg, "M3": mmHg, "M4": mmHg, "M4-P1": mmHg}  patient-level RMSE
     waveform_coverage   share (0-1) of this case's primary forecasts with waveform features
-    new_onset_80        new-onset readings below 80% of the record-start baseline in the window
+    new_onset_80        new-onset readings below 80% of the record-start baseline in the window: scored
+                        targets below the threshold whose issue reading is not (SPEC §4.5, §6.6)
     flagged_80          {"M2": int, "M4": int}  of those, flagged one reading ahead by each model
     phenylephrine_ug    `intraop_phe` chart total in µg, or null if not recorded
     ephedrine_mg        `intraop_eph` chart total in mg, or null if not recorded
@@ -288,11 +291,15 @@ def load_cases(cases_dir: Path) -> tuple[bool, list, dict]:
     return bool(d.get("synthetic", False)), cases, series
 
 
-def write_cases(cases_dir: Path, cases: list, series: dict, synthetic: bool):
+def write_cases(cases_dir: Path, cases: list, series: dict, synthetic: bool, meta: dict | None = None):
+    """Write the case folder. `meta` (provenance: commit, data, stage) is stored under "meta" in
+    cases.json; readers ignore it."""
     cases_dir = Path(cases_dir)
     (cases_dir / "series").mkdir(parents=True, exist_ok=True)
+    head = {"schema": CASES_SCHEMA, "synthetic": synthetic, "cohort": "S-ob"}
+    if meta is not None:
+        head["meta"] = meta
     (cases_dir / "cases.json").write_text(json.dumps(
-        {"schema": CASES_SCHEMA, "synthetic": synthetic, "cohort": "S-ob",
-         "cases": [c.to_dict() for c in cases]}, indent=1, ensure_ascii=False) + "\n")
+        {**head, "cases": [c.to_dict() for c in cases]}, indent=1, ensure_ascii=False, default=str) + "\n")
     for cid, s in series.items():
         (cases_dir / "series" / f"{cid}.json").write_text(json.dumps(s.to_dict(), ensure_ascii=False) + "\n")

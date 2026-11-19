@@ -42,6 +42,10 @@ def test_sob_access_refused_without_env(no_env):
         io.check_cohort_access("sob")
     with pytest.raises(PermissionError):
         io.load_manifest("sob")
+    with pytest.raises(ValueError):
+        io.check_cohort_access("other")
+    if not paths.COHORTS.exists():
+        pytest.skip("case table not downloaded (scripts/download.py)")
     sob = io.caseids("sob")                              # case-table metadata only
     assert len(sob) == 21
     with pytest.raises(PermissionError):

@@ -7,6 +7,12 @@
   --publish     build docs/ and README.md from the real results (--results, --cases-dir, --config).
                 Refuses synthetic inputs, inconsistent case files and any leftover placeholder
                 ({{, [X], NaN, TODO, ...); docs/ is only replaced when every check passes.
+
+The cases folder (--cases-dir, default data/derived/site/) is written after the frozen scoring by
+`scripts/run_frozen_scoring.py series`; site settings are filled by `scripts/fill_site_config.py`.
+For tests only, `--publish --test-allow-synthetic --out DIR --readme FILE` runs the publish path on a
+synthetic chain into DIR (never docs/ or the repository README); every check except the synthetic
+refusal still applies.
 """
 from __future__ import annotations
 
@@ -74,16 +80,30 @@ def main(argv=None) -> int:
     ap.add_argument("--replays", choices=["rule1", "all"], default="rule1",
                     help="featured replays as video: rule 1 only, or rules 1-3")
     ap.add_argument("--jobs", type=int, default=8)
+    ap.add_argument("--test-allow-synthetic", action="store_true", help=argparse.SUPPRESS)   # tests only
     a = ap.parse_args(argv)
     replays = (1,) if a.replays == "rule1" else (1, 2, 3)
     if a.synthetic:
+        if a.test_allow_synthetic:
+            ap.error("--test-allow-synthetic goes with --publish")
         return preview(a.variant or list(FX.VARIANTS), a.out or ROOT / "build" / "preview", a.jobs, replays)
-    if a.out or a.variant:
-        ap.error("--out and --variant are for --synthetic only; --publish always writes docs/")
+    if a.variant:
+        ap.error("--variant is for --synthetic only")
+    docs = ROOT / "docs"
+    dest, cache = docs, ROOT / "build" / ".site-cache"
+    if a.test_allow_synthetic:
+        # tests only: publish a synthetic chain into a temporary folder, never docs/ or README.md
+        o = a.out.resolve() if a.out else None
+        if o is None or o == ROOT.resolve() or docs.resolve() in (o, *o.parents) or \
+                a.readme.resolve() == (ROOT / "README.md").resolve():
+            ap.error("--test-allow-synthetic needs --out and --readme outside docs/ and README.md")
+        dest, cache = a.out, a.out.parent / ".site-cache"
+    elif a.out:
+        ap.error("--out is for --synthetic only; --publish always writes docs/")
     try:
         site = load_site_data(a.results, a.cases_dir, load_config(a.config))
-        res = build_site(site, ROOT / "docs", publish=True, readme_path=a.readme,
-                         cache_dir=ROOT / "build" / ".site-cache", replay_rules=replays, jobs=a.jobs)
+        res = build_site(site, dest, publish=True, readme_path=a.readme, cache_dir=cache, replay_rules=replays,
+                         jobs=a.jobs, allow_synthetic=a.test_allow_synthetic)
     except PublishRefused as ex:
         print(ex, file=sys.stderr)
         return 2
@@ -91,7 +111,7 @@ def main(argv=None) -> int:
         print(f"refused: missing input {rel(Path(ex.filename))}", file=sys.stderr)
         return 2
     w = res.weight
-    print(f"published: docs/index.html and {rel(res.readme_path)}; page weight before case images "
+    print(f"published: {rel(dest / 'index.html')} and {rel(res.readme_path)}; page weight before case images "
           f"{w['desktop'] / 1e3:.0f} kB (desktop), {w['phone'] / 1e3:.0f} kB (phone)")
     return 0
 

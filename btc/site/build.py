@@ -6,6 +6,8 @@ publish (`publish=True`): refuses synthetic inputs, inconsistent case files and,
     staging folder, any placeholder, forbidden string, unit mix, parity failure, external request or a
     page heavier than 1 MB before case images. Only then are `docs/index.html`, `docs/assets/` and
     `docs/.nojekyll` replaced and the README written (images referenced as `docs/assets/...`).
+    `allow_synthetic=True` lifts only the synthetic refusal, for end-to-end tests that publish a fully
+    synthetic chain into a temporary folder; every other check still applies and the watermark stays.
 Expensive per-case images and replays are cached by content hash.
 """
 from __future__ import annotations
@@ -193,11 +195,12 @@ def run_checks(site, out_dir: Path, html: str, readme: str) -> tuple:
 
 
 def build_site(site, out_dir: Path, *, publish: bool = False, readme_path: Path | None = None,
-               cache_dir: Path | None = None, replay_rules=(1,), jobs: int = 8) -> BuildResult:
+               cache_dir: Path | None = None, replay_rules=(1,), jobs: int = 8,
+               allow_synthetic: bool = False) -> BuildResult:
     out_dir = Path(out_dir)
     cache = Path(cache_dir) if cache_dir else out_dir.parent / ".site-cache"
     if publish:
-        if site.synthetic:
+        if site.synthetic and not allow_synthetic:
             raise PublishRefused("refused: the inputs are synthetic (fixtures); publish needs the real results")
         cp = consistency_problems(site)
         if site.config.deviations is None:

@@ -60,6 +60,9 @@ One row per (caseid, `w`) 10-s window of the stored pleth record (§5), for ever
 - Per-window features (§4.3), seconds or ratios: `pat, rise, width, bav`. Data-quality report only, never a model input (§4.3): `notch_t, notch_ratio`.
 - ECG and monitor HR (signal-level agreement only): `ecg_ok` (complete, finite, non-flat ECG window), `r_failed` (the detector raised; the window has no R peaks), `n_r, r_rate` (R peaks, beats/min), `hr_monitor` (median `Solar8000/HR` > 0 in the window), `n_hr`.
 
+## 4c. Site case files: `data/derived/site/` (after the frozen scoring)
+`scripts/run_frozen_scoring.py series` (§9 step 8, `btc/models/site_cases.py`) writes `cases.json` (one entry per S-ob case, with status and reason), `series/<caseid>.json` (one per scored case) and `MANIFEST.json`, in the format that `btc/site/series.py` documents. They hold VitalDB-derived series, so they stay in this git-ignored folder; the site build turns them into images only (§2.1, §8.3). The forecasts come from the frozen models without a refit; the heart-rate and pump tracks are read through `btc.io`, so S-ob needs `BTC_FROZEN_SCORING=1` for this run.
+
 ## 5. Rules for every producer
 - Cohorts. Every builder takes `--cohort sdev|sob` and writes `<cohort>_` outputs. S-ob signals are read or requested only at the frozen scoring (§9 step 7): `btc.io` and `scripts/download.py` refuse S-ob unless `BTC_FROZEN_SCORING=1` is set, and the variable is set only from the frozen scoring on: the scoring run and the S-ob exports that follow it (in the tests, only with fake data). S-dev-specific checks (case counts, the two §2.3 cases) run for S-dev only.
 - Provenance (§10). Every parquet output carries key `btc` in its schema metadata, and every json log a `git` entry: commit, `describe`, state (clean, dirty or unknown; untracked files count as dirty), the porcelain status and `allow_dirty`. A builder refuses a dirty or unknown state unless `--allow-dirty` is given (`btc.provenance`).

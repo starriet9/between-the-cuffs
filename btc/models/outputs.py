@@ -14,20 +14,22 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from ..paths import ROOT
+from .. import paths, provenance
 from ..provenance import with_credit
 
 
 def git_meta() -> dict:
-    def run(*a):
-        try:
-            return subprocess.run(["git", *a], cwd=ROOT, capture_output=True, text=True, check=True).stdout.strip()
-        except Exception:
-            return None
-    status = run("status", "--porcelain", "--untracked-files=no")
-    return {"commit": run("rev-parse", "HEAD"), "describe": run("describe", "--tags", "--always", "--dirty"),
-            "tracked_files_modified": bool(status) if status is not None else None,
-            "tags_at_head": (run("tag", "--points-at", "HEAD") or "").split()}
+    """The git state of the code (SPEC §10), as `btc.provenance.git_state`: `state` is clean, dirty or
+    unknown, and any modified, staged or untracked file that git does not ignore makes it dirty
+    (`dirty` True). Plus the tags at HEAD."""
+    st = provenance.git_state()
+    try:
+        tags = subprocess.run(["git", "tag", "--points-at", "HEAD"], cwd=paths.ROOT, capture_output=True,
+                              text=True, check=True).stdout.split()
+    except Exception:
+        tags = []
+    return {"commit": st["commit"], "describe": st["describe"], "state": st["state"], "dirty": st["dirty"],
+            "status": st["status"], "tags_at_head": tags}
 
 
 def _clean(o):

@@ -14,6 +14,7 @@ analyses   the registered model chains and their cross-validated runs
 secondary  secondary and control analyses (§6.6, §6.7)
 gbm        gradient-boosting check (§6.8)
 pipeline   confirmatory S-dev run, freeze, frozen S-ob scoring (§9)
+site_cases per-case files of the case browser and the replays, after the frozen scoring (§8, §9 step 8)
 synthetic  synthetic tables in the btc/SCHEMA.md format, for tests only
 """
 

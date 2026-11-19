@@ -10,6 +10,10 @@ Stages and output folders (under the output root):
                         cesarean line.
 - `sob/after_frozen_scoring/` §9 step 8: everything else on S-ob, labelled as computed after the
                         frozen scoring; models fitted on S-dev alone.
+- `<cases-dir>`         §9 step 8: the per-case files of the case browser, the summary figure and the
+                        replays (btc/site/series.py; `site_cases`), from the frozen models without a
+                        refit. They hold VitalDB-derived series, so they go to a git-ignored folder
+                        (default `data/derived/site/`), never to `results/`.
 
 Every analysis fits and scores the analysed cases only (`Tables.analysed`; SPEC §2.2: analysable
 cases without a recorded neuromuscular blocker). The one exception is the sensitivity analysis
@@ -554,6 +558,20 @@ def after_frozen(T_dev: Tables, T_ob: Tables, frozen: dict, w: Writer, n_jobs: i
     out["hypotension_line_sob"] = sec.hypotension_line({"S-ob": hyp})
     w.json("after_frozen_scoring/summary.json", out)
     return {**out, "frame": frame, "preds": preds, "hyp": hyp}
+
+
+def site_cases(frozen: dict, T_ob: Tables, source, root: Path, cases_dir: Path, meta: dict,
+               synthetic: bool) -> dict:
+    """Per-case site files (§8.1-§8.3) after the frozen scoring (§9 step 8); see `site_cases.py`.
+    Needs `root/sob/frozen_scoring/summary.json` (n) and `root/sob/after_frozen_scoring/conformal.csv`
+    (the §6.7 half-widths). No model is fitted. Returns the manifest."""
+    import json
+    from .site_cases import build_site_cases, read_widths, write_site_cases
+    root = Path(root)
+    n = json.loads((root / "sob" / "frozen_scoring" / "summary.json").read_text())["n"]
+    widths = read_widths(root / "sob" / "after_frozen_scoring" / "conformal.csv")
+    cases, series = build_site_cases(frozen, T_ob, source, widths, expected_n=int(n))
+    return write_site_cases(cases_dir, cases, series, synthetic, {**meta, "stage": AFTER_LABEL})
 
 
 def readme_blocks(sdev_dir: Path, sob_dir: Path) -> str:

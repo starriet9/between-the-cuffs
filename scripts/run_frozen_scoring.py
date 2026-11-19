@@ -13,6 +13,13 @@ Commands:
           both commits; a code change between the two runs must be reported with its diff (§9).
   after   S-ob analyses after the frozen scoring (§9 step 8), labelled as such, with models fitted
           on S-dev alone; writes `<out>/sob/after_frozen_scoring/` and the README table block.
+  series  the per-case files of the case browser, the summary figure and the replays (§8.1-§8.3,
+          §9 step 8, labelled as computed after the frozen scoring), in the format of
+          btc/site/series.py: loads the frozen models (SHA-256 checked, no refit) and writes
+          `--cases-dir` (default data/derived/site/, git-ignored: VitalDB-derived series). Needs a
+          completed `score` and `after`. On real data it reads the S-ob heart-rate and pump tracks
+          through btc.io, so BTC_FROZEN_SCORING=1 must be set for this run, and the window table
+          `<sob-dir>/sob_windows.parquet`.
   all     freeze, score and after in one go (synthetic tests only).
 
 Every attempt is appended to `<out>/sob/frozen_scoring_log.jsonl`. `--synthetic` generates
@@ -27,6 +34,8 @@ import os
 import sys
 import traceback
 from pathlib import Path
+
+import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -45,6 +54,23 @@ def _log(out: Path, entry: dict):
         f.write(json.dumps(entry) + "\n")
 
 
+def code_changed(g: dict, prev_commit: str | None, out: Path) -> bool:
+    """For a rerun after a crash (SPEC §9 step 7): a different commit, an unknown git state, or any
+    modified or untracked file other than untracked outputs inside the output folder `out` (the crashed
+    run's own files)."""
+    if prev_commit != g["commit"] or g["state"] == "unknown":
+        return True
+    try:
+        rel = Path(out).resolve().relative_to(ROOT.resolve()).as_posix().rstrip("/") + "/"
+    except ValueError:
+        rel = None
+    for line in g["status"]:
+        path = line[3:].strip().strip('"')
+        if not (line.startswith("?? ") and rel and (path if path.endswith("/") else path + "/").startswith(rel)):
+            return True
+    return False
+
+
 def _state(out: Path):
     p = out / "sob" / "frozen_scoring" / "STATE.json"
     return (json.loads(p.read_text()) if p.exists() else None), p
@@ -52,7 +78,7 @@ def _state(out: Path):
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("command", choices=["freeze", "score", "after", "all"])
+    ap.add_argument("command", choices=["freeze", "score", "after", "series", "all"])
     ap.add_argument("--synthetic", action="store_true")
     ap.add_argument("--synthetic-seed", type=int, default=1)
     ap.add_argument("--wf-signal", type=float, default=0.0)
@@ -60,6 +86,8 @@ def main(argv=None) -> int:
     ap.add_argument("--data-dir", type=Path, default=DERIVED, help="folder with sdev_*.parquet")
     ap.add_argument("--sob-dir", type=Path, default=DERIVED, help="folder with sob_*.parquet")
     ap.add_argument("--out-dir", type=Path, default=None)
+    ap.add_argument("--cases-dir", type=Path, default=None,
+                    help="series: output folder (default data/derived/site/; <out>/site_cases with --synthetic)")
     ap.add_argument("--rerun-after-crash", action="store_true")
     ap.add_argument("--no-gb", action="store_true", help=argparse.SUPPRESS)       # synthetic tests only
     ap.add_argument("--n-jobs", type=int, default=min(8, os.cpu_count() or 1))
@@ -110,7 +138,7 @@ def main(argv=None) -> int:
             return 2
         rerun = st is not None
         if rerun:
-            changed = st.get("commit") != g["commit"] or bool(g["tracked_files_modified"])
+            changed = code_changed(g, st.get("commit"), out)
             _log(out, {"event": "rerun_after_crash", "previous_commit": st.get("commit"), "commit": g["commit"],
                        "code_changed": changed})
             if changed:
@@ -151,6 +179,34 @@ def main(argv=None) -> int:
         w.manifest("after_frozen_scoring/MANIFEST.json")
         _log(out, {"event": "after_frozen_scoring_written", "commit": g["commit"]})
         print(f"post-freeze S-ob analyses written to {out / 'sob' / 'after_frozen_scoring'}")
+
+    if "series" in cmds:
+        st, _ = _state(out)
+        if st is None or st.get("status") != "completed":
+            ap.error("the frozen S-ob scoring has not completed")
+        if not (out / "sob" / "after_frozen_scoring" / "conformal.csv").exists():
+            ap.error("run 'after' first: the interval half-widths come from its conformal.csv (SPEC §6.7)")
+        frozen = P.load_frozen(out)
+        sha = json.loads((out / "frozen" / "FROZEN.json").read_text())["models_sha256"]
+        To = sob()
+        if a.synthetic:
+            from btc.models.synthetic import SyntheticSignals
+            source = SyntheticSignals(To.cases, a.synthetic_seed)
+        else:
+            from btc.models.site_cases import RawSignals
+            win = a.sob_dir / "sob_windows.parquet"
+            if not win.exists():
+                ap.error(f"missing window table {win.name} (scripts/build_windows.py --cohort sob)")
+            try:
+                source = RawSignals(To.cases, pd.read_parquet(win))
+            except PermissionError as ex:
+                ap.error(f"{ex} (series reads the S-ob heart-rate and pump tracks)")
+        cases_dir = a.cases_dir or (out / "site_cases" if a.synthetic else DERIVED / "site")
+        man = P.site_cases(frozen, To, source, out, cases_dir, {**meta, "frozen_models_sha256": sha},
+                           synthetic=a.synthetic)
+        _log(out, {"event": "site_cases_written", "commit": g["commit"], "n_files": len(man["files"]),
+                   "cases_json_sha256": man["files"]["cases.json"]})
+        print(f"site case files ({len(man['files']) - 1} series) written to {cases_dir}")
     return 0
 
 

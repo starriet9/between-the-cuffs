@@ -247,6 +247,7 @@ def test_integrity_on_sdev_manifest():
     assert c.ecg is None and c.pleth is not None
 
 
+@pytest.mark.skipif(not paths.COHORTS.exists(), reason="case table not downloaded (scripts/download.py)")
 def test_load_case_refuses_sob():
     c = io.load_cohorts()
     sob = int(c.loc[c["cohort"] == "S-ob", "caseid"].iloc[0])
@@ -254,6 +255,7 @@ def test_load_case_refuses_sob():
         io.load_case(sob)
 
 
+@pytest.mark.skipif(not paths.COHORTS.exists(), reason="case table not downloaded (scripts/download.py)")
 def test_cerclage_flag_counts_six():
     c = io.load_cohorts()
     assert int(c["cerclage"].sum()) == 6 and (c.loc[c["cerclage"], "cohort"] == "S-dev").all()

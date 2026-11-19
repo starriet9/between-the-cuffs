@@ -1,0 +1,7 @@
+# Downloaded data and local environment (not redistributed)
+data/
+.venv/
+__pycache__/
+*.tar.gz
+*.zip
+tools/jdk/

@@ -1,0 +1,69 @@
+# Derived tables: shared interface
+
+All tables live in `data/derived/` (gitignored) as `<cohort>_<table>.parquet`, with `<cohort>` = `sdev` (S-dev) or `sob` (S-ob, built only at the frozen scoring, §9). The same code builds both; the names below use `sdev_`. Times are seconds from the start of the recording (`casestart` = 0). Section numbers refer to `SPEC.md`. Where SPEC needs a column that is not listed here, add it with the same naming pattern and document it in this file.
+
+Keys: `caseid` (int), `window` (`"primary"` = 0–30 min; `"secondary"` = 0 to `opstart`, capped at 60 min), `issue_n` (1-based index of the issue reading among the *valid* readings of the record), `k` (1, 2, 3 = next, second-next, third-next reading), `variant` (see below).
+
+## 1. `sdev_cases.parquet` (cuff side)
+One row per case of the cohort: `caseid, subjectid, cohort, cerclage, opstart, analysable, not_analysable_reason, nmb_recorded, analysed, n_valid_primary, median_interval_primary_s, fast_cycling` (median interval < 90 s, primary window, final cuff rule), `pleth_present, ecg_present, waveform_flag` (§2.3: absent / kept-and-flagged), `hr_t_first, hr_t_last, pleth_t_first, pleth_t_last, ecg_t_first, ecg_t_last, first_issue_t, last_issue_t`, `donor_caseid` (P1 donor, §6.6; NaN if none), plus exclusion and gap counts (§2.4).
+- Added (cuff side, `btc/instances.py`): `pleth_status, ecg_status` (`ok`, `absent_in_file`, `absent_integrity` = header rate not 500 Hz, block rate or overwritten share fails, `kept_flagged`; §2.3), `sex, age, age_censored` (VitalDB case table; a censored entry such as ">89" gives its bound and `age_censored` True), `n_issue_primary`, and the counts `n_readings_all, n_valid_all, n_readings_primary, n_drop_<reason>_all, n_drop_<reason>_primary` (reason = `incomplete`, `map_range`, `order`; first failing rule), `n_gaps_all, n_gaps_primary`.
+- `pleth_present, ecg_present`: in the case file and not treated as absent by §2.3. `not_analysable_reason`: `;`-joined, in this order: `subject_also_in_sob`, `pleth_absent`, `ecg_absent`, `lt6_valid_readings_primary`.
+- `nmb_recorded, analysed` (§2.2, both cohorts): `nmb_recorded` is True if the VitalDB case-table total `intraop_rocu` or `intraop_vecu` (`data/raw/meta/cases.csv`, mg) is > 0, each compared with 0 on its own; a missing value counts as not recorded. `analysed` = `analysable` and not `nmb_recorded`. `analysable` keeps its meaning (signal and cuff rule). Only analysed cases are fitted or scored (`btc.models.data.Tables.analysed`); instances, signal features and P1 donors are built for every analysable case, so the sensitivity analysis that includes the `nmb_recorded` cases can use them.
+- `<signal>_t_first, <signal>_t_last`: first and last non-missing sample. `first_issue_t, last_issue_t`: first and last issue point in the primary window by the §3 definition (valid readings from the third on, with or without a target); they define donor coverage.
+- `fast_cycling` is False when the case has fewer than 2 valid readings in the primary window.
+- `donor_caseid`: the analysable cases of the same cohort (with or without `nmb_recorded`), in ascending case-ID order, are permuted with `numpy.random.default_rng(20261118).permutation`; the donor is the next case after the recipient, wrapping around, of another subject, whose HR, pleth and ECG extents cover [`first_issue_t`, `last_issue_t`].
+- S-ob only (§2.6, descriptive): `pump_present` (`Orchestra/PHEN_RATE` has a record in the case file), `intraop_phe_ug`, `intraop_eph_mg` (chart totals, kept apart), `vaso_stratum` (`pump`; `bolus_no_pump` = no pump track and phenylephrine or ephedrine total > 0, each compared with 0 on its own; `neither_recorded`) and `vaso_stratum_phe` (the same with phenylephrine alone). µg and mg are never added.
+- `subject_also_in_sob` applies to S-dev cases only (§2.2).
+
+## 2. `sdev_readings.parquet` (cuff side)
+One row per cuff reading after merging (§2.4): `caseid, n_all, t, sbp, dbp, map, valid, drop_reason, gap_flag`, and `n` = index among valid readings (NaN if dropped).
+- Added: `fail_incomplete, fail_map_range, fail_order` (each rule on its own; overlapping), `gap_s` (interval to the previous valid reading), `spread_s` (time from the first to the last change of the merged cluster).
+- `drop_reason`: `""` (valid), `incomplete` (a value is missing at the reading, so SBP > MAP > DBP cannot hold), `map_range`, `order`; the first failing rule in that order.
+- A reading's value of a track is the value at that track's first sample after `t`; it is missing if that sample is itself a change (it then belongs to a later reading) or if there is none.
+- `gap_flag` marks the later reading of a gap longer than 2x the case median interval; the case median interval is the primary-window median (as for `fast_cycling`).
+
+## 3. `sdev_instances.parquet` (cuff side)
+One row per (caseid, window, issue_n, k) for analysable cases (including those with `nmb_recorded`), issue points from the third valid reading of the record onwards, targets within 400 s of the issue time and inside the same window (§3).
+- `subjectid, fast_cycling, t_issue, t_prev, t_target, h_s, h_min, h_med_prev_s` (median of the patient's previous intervals, §3 sensitivity analysis).
+- Targets: `y_map, y_sbp, y_dbp`.
+- `last_map, last_sbp, last_dbp, base_map, base_sbp` (record-start baseline = mean of the first 3 valid readings, §2.5), `run_mean_map` (M00 input: causal running mean of valid readings 1..issue_n).
+- M2 form (a): `cuff_level` (last MAP − base), `cuff_slope` (mmHg/min, least-squares slope through the last 3 valid readings at real times), `cuff_curv` (mmHg/min², second derivative of the parabola through them), `cuff_pp` (last SBP − DBP), `cuff_tsr_min` (t_issue / 60).
+- M2 form (b): `cuff_lag0, cuff_lag1, cuff_lag2` (MAP − base at readings issue_n, issue_n−1, issue_n−2), `cuff_gap1_min, cuff_gap2_min` (gaps between them).
+- SBP analogs for the SBP models of §6.7, same names with `sbp_` after `cuff_` (for example `cuff_sbp_level`).
+  The SBP analogs are `cuff_sbp_level, cuff_sbp_slope, cuff_sbp_curv, cuff_sbp_lag0, cuff_sbp_lag1, cuff_sbp_lag2`; `cuff_pp`, `cuff_tsr_min` and the gaps are shared.
+- Added: `target_n` (= issue_n + k), `t_next` (time of valid reading issue_n + 1), `h_bin` (1-4; §3 bins, lower edge in, upper out, 400 s in bin 4).
+- Yardstick (§3): every primary-window row with k = 2 is one triple r = issue_n; L's elapsed time is `t_next − t_issue`; U is the k = 1 row at issue_n + 1; T's signal features are the feature rows at issue_n + 1.
+- `h_med_prev_s` is the median of all intervals between valid readings 1..issue_n (the same value for every k).
+
+## 4. Signal features: `sdev_features_hr.parquet` (HR side) and `sdev_features_wf.parquet` (waveform side)
+One row per (caseid, window, issue_n, variant), for every issue point in `sdev_instances` (independent of k). Both carry `t_issue, t_prev, t_end` (the time at which signal samples stop, exclusive).
+- `variant`:
+  - `real`: the patient's own signals; samples strictly before `t_issue` (§3, §4.2, §4.3).
+  - `p1`: the recipient's reading and issue times run on the donor's signals (`donor_caseid`), under the donor's own quality mask (§6.6).
+  - `p2`: the patient's own signals with reading and issue times shifted back by 600 s (§6.6).
+  - `ia`: inflation-artefact variant: samples stop at `t_issue − 30` s (§3 yardstick).
+  - `strict` (waveform only): the stricter quality rule, primary PQI plus beat-template correlation ≥ 0.85 (§5 disclosure).
+- HR columns (§4.2): `hr_level, hr_change, hr_slope` (NaN when missing; the model code builds the missing-indicators).
+  - Added: `signal_caseid` (case whose signal was used: own case, or the donor for `p1`; NaN if no donor), `time_shift_s` (0, or −600 for `p2`), `hr_n, hr_n_prev` (valid samples in the two 60-s windows).
+  - `t_issue, t_prev` are always the unshifted times (join keys). Windows: [t − 60, t) at t = `t_issue + time_shift_s` and t = `t_prev + time_shift_s`, using only samples before `t_end`. For `ia`, the windows stay anchored at `t_issue` and `t_prev` and samples at or after `t_end` are dropped.
+  - A valid HR sample is finite and > 0 bpm; of several valid samples with one timestamp, the last in file order is kept. If the issue window has < 10 valid samples, all three HR columns are NaN; if only the previous-reading window has < 10, only `hr_change` is NaN.
+- Waveform columns (§4.3): for f in `pat, rise, width, bav` (`btc.beats.FEATURES`; the notch quantities are not model inputs and are not in this table): `wf_<f>_lvl` (form i, relative to the record reference) and `wf_<f>_chg` (form ii, change since the previous reading); NaN when missing. Plus `wf_n_windows, wf_n_usable, wf_usable_share` (§6.6 quality strata) and `wf_available` (≥ 2 usable windows; if False, M4 falls back to M3).
+  - Added (waveform side, `btc/waveform.py`): `signal_caseid` and `time_shift_s` as on the HR side; `t_lo` = start of the current interval on the signal's own timeline, max(t_prev, t_issue − 120) + shift. `t_issue, t_prev` are the unshifted join keys; `t_end` is on the signal timeline (`t_issue` − 600 for `p2`, `t_issue` − 30 for `ia`).
+  - A window is "between" a and b if it starts at or after a and ends at or before b (window ends are exclusive, so all its samples are before b). Current interval: a = `t_lo`, b = min(t_issue + shift, `t_end`); previous interval (for form ii): a = max(t_pp, t_prev − 120) + shift, b = min(t_prev + shift, `t_end`), with t_pp = time of valid reading issue_n − 2. Every window used, including the 6 reference windows, ends at or before `t_end`.
+  - Each per-forecast feature is the median of the per-window values over the usable windows of the interval; missing unless ≥ 2 windows have a value. Form (i) = current − reference (median over the first 6 usable windows of the record, missing until the 6th ends by the cutoff); form (ii) = current − the same aggregate at the previous reading.
+  - `wf_n_windows` counts the 10-s windows of the stored pleth record inside the current interval (windows with missing samples included, as unusable); 0 where the record does not cover it (`wf_usable_share` NaN). `wf_n_usable` uses `usable_strict` for the `strict` variant.
+
+## 4b. `sdev_windows.parquet` (waveform side, `scripts/build_windows.py`)
+One row per (caseid, `w`) 10-s window of the stored pleth record (§5), for every case with a pleth not treated as absent (§2.3); window w spans [`t_start`, `t_end`) = [pleth_t0 + 10 w, pleth_t0 + 10 w + 10). Signals come from `btc.io.load_case` (the single §2.3 implementation); `sdev_windows_log.json` lists each case's `pleth`/`ecg` status as `btc.io` gives it and the number of windows on which the R-peak detector raised, and `scripts/build_features_wf.py` refuses to run if these statuses differ from `sdev_cases.parquet`. A missing case archive stops the build.
+- Quality index (§5): `n_missing, dom_freq, peak_share, max_abs_z, const_run_n`, flags `fail_missing, fail_flat, fail_freq, fail_peak, fail_amp, fail_const`, and `pqi_pass`.
+- Beats (computed for `pqi_pass` windows): `n_peaks, n_beats, n_pat, n_notch`, `fail_beats` (passed the index, < 4 beats), `usable` (index passed and ≥ 4 beats), `tcorr` (median beat-template correlation), `usable_strict` (usable and `tcorr` ≥ 0.85), `pleth_rate` (beats/min).
+- Per-window features (§4.3), seconds or ratios: `pat, rise, width, bav`. Data-quality report only, never a model input (§4.3): `notch_t, notch_ratio`.
+- ECG and monitor HR (signal-level agreement only): `ecg_ok` (complete, finite, non-flat ECG window), `r_failed` (the detector raised; the window has no R peaks), `n_r, r_rate` (R peaks, beats/min), `hr_monitor` (median `Solar8000/HR` > 0 in the window), `n_hr`.
+
+## 5. Rules for every producer
+- Cohorts. Every builder takes `--cohort sdev|sob` and writes `<cohort>_` outputs. S-ob signals are read or requested only at the frozen scoring (§9 step 7): `btc.io` and `scripts/download.py` refuse S-ob unless `BTC_FROZEN_SCORING=1` is set, and the variable is set only from the frozen scoring on: the scoring run and the S-ob exports that follow it (in the tests, only with fake data). S-dev-specific checks (case counts, the two §2.3 cases) run for S-dev only.
+- Provenance (§10). Every parquet output carries key `btc` in its schema metadata, and every json log a `git` entry: commit, `describe`, state (clean, dirty or unknown; untracked files count as dirty), the porcelain status and `allow_dirty`. A builder refuses a dirty or unknown state unless `--allow-dirty` is given (`btc.provenance`).
+- Credit (§2.1). Every generated Markdown report ends with the VitalDB credit, the licence link and the statement of changes (`btc.provenance.with_credit`).
+- Shared constants (P2 shift, ia exclusion, window end, h-bin edges, seed) come from `btc/constants.py`, also for `btc/models/`.
+- No model is fitted to real data, no forecast error is computed, and no feature is compared with blood pressure. Choices are made on signal-level criteria only (§9).
+- Features use only samples strictly before `t_end`; the leakage tests (§4.4) enforce this.

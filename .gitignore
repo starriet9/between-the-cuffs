@@ -5,3 +5,9 @@ __pycache__/
 *.tar.gz
 *.zip
 tools/jdk/
+
+# Site previews and caches (scripts/build_site.py)
+build/
+
+# Synthetic test outputs of the model code (scripts/run_confirmatory.py --synthetic)
+results_synthetic/

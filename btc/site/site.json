@@ -1,0 +1,20 @@
+{
+ "_note": "Site settings for scripts/build_site.py. Values in {{...}} must be filled before --publish.",
+ "author_name": "{{AUTHOR_NAME}}",
+ "contact": "{{CONTACT}}",
+ "repo_url": "https://github.com/starriet9/between-the-cuffs",
+ "page_url": "https://starriet9.github.io/between-the-cuffs/",
+ "branch": "main",
+ "registered_date": "2026-11-21",
+ "registration_commit": "59939b7",
+ "frozen_date": "{{FROZEN_DATE}}",
+ "frozen_tag": "{{FROZEN_TAG}}",
+ "scored_date": "{{SCORED_DATE}}",
+ "scored_ref": "{{SCORED_REF}}",
+ "deviations": null,
+ "reproduce_command": "{{REPRODUCE_COMMAND}}",
+ "checksums_path": "{{CHECKSUMS_PATH}}",
+ "narrated_replay_url": null,
+ "pdf_url": null,
+ "last_updated": "{{LAST_UPDATED}}"
+}

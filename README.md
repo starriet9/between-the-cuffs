@@ -1,21 +1,34 @@
 # between-the-cuffs
 
-After spinal anesthesia, blood pressure is measured by a cuff every 1–5 minutes, while the pulse oximeter and ECG record continuously. **Do heart rate and pulse-oximeter waveform features lower the error of a next-cuff-reading MAP forecast beyond a cuff-only third-order autoregressive model?**
+**After spinal anesthesia, do heart rate and the pulse-oximeter waveform improve the forecast of the next cuff reading (MAP) beyond the cuff readings alone?**
 
-This repository answers that question on open data ([VitalDB](https://vitaldb.net/)):
-- the models are fitted on non-cesarean spinal cases;
-- they are scored once, frozen, on the spinal cesarean cases;
-- the result is reported whichever way it falls.
+**Answer: not known yet.** The test was registered on 2026-11-21, before any model was fitted. The result is due by 5 December 2026 and will be posted here whichever way it falls.
 
-## Status
+[Pre-registered](PREREG.md) · fitted on 203 non-cesarean spinal cases · scored once, frozen, on up to 20 cesarean cases · placebo control · open data ([VitalDB](https://vitaldb.net/))
 
-**Pre-registered; no model has been fitted yet.** This first commit holds the registration:
+## Why it matters
+
+After a spinal, a cuff reads blood pressure every 1–5 minutes, and pressure can fall between two readings. The pulse oximeter and ECG record continuously and are already on every patient. If they improve a cuff-based forecast, the gain needs no new sensor. If they do not, the analysis reports the largest gain the data still allow.
+
+## What is locked
+
+- **One comparison.** Cuff + heart rate + pleth waveform features, against a cuff-only third-order autoregressive model, on the error of the next-reading MAP forecast.
+- **One rule.** At least 5% lower error, with a 95% CI that excludes zero.
+- **One look at the test set.** The models are fitted on the non-cesarean cases, frozen, and scored once on the cesarean cases. No cesarean signal is opened before that.
+- **A placebo.** For a positive claim, the same models refitted on another patient's signals must not meet the rule.
+- **The wording.** The headline for each of six possible outcomes is already written ([`PREREG.md`](PREREG.md) §6). The data pick one.
+
+## Registration
+
+**No model has been fitted yet.** The registration is version 1.5 of two files:
 - [`PREREG.md`](PREREG.md): the hypothesis, primary outcome, decision rule, pre-written headlines and everything seen before registration;
 - [`SPEC.md`](SPEC.md): the full design.
 
-The analysis code, results, replay and case browser will follow in later commits. Any deviation from the registration will be listed in `REPORT.md`.
+Version 1.5 supersedes version 1.4, the first commit of this repository (`fca645e`). Version 1.4 was replaced before any model was fitted. The git history shows every change, and `PREREG.md` §11 lists them.
 
-This is a self-registration by git commit. It has no independent third-party timestamp. The SHA-256 hashes of both files at registration will be listed in `REPORT.md`.
+Commits after the registration add the analysis code, then the results, a replay of one case and a browser of all scored cesarean cases. Any deviation from the registration will be listed in `REPORT.md`.
+
+This is a self-registration by git commit. Commit dates are set by the author; the time of each GitHub release (here `prereg-v1.5`) is recorded by GitHub. There is no archive snapshot. The SHA-256 hashes of both files, for both versions, will be listed in `REPORT.md`.
 
 ## Data
 

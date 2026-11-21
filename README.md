@@ -14,7 +14,7 @@ After a spinal, a cuff reads blood pressure every 1–5 minutes, and pressure ca
 
 - **One comparison.** Cuff + heart rate + pleth waveform features, against a cuff-only third-order autoregressive model, on the error of the next-reading MAP forecast.
 - **One rule.** At least 5% lower error, with a 95% CI that excludes zero.
-- **One look at the test set.** The models are fitted on the non-cesarean cases, frozen, and scored once on the cesarean cases. No cesarean signal is opened before that.
+- **One look at the cesarean cases.** The answer comes from nested cross-validation in the 203 non-cesarean cases. The cesarean cases are too few to decide it: the frozen models are scored once on them, and the result is reported beside the answer as a case series. No cesarean signal is opened between the registration and that run; what was seen during design is listed in [`PREREG.md`](PREREG.md#9-information-seen-before-this-registration) §9.
 - **A placebo.** For a positive claim, the same models refitted on another patient's signals must not meet the rule.
 - **The wording.** The headline for each of six possible outcomes is already written ([`PREREG.md`](PREREG.md) §6). The data pick one.
 
@@ -28,7 +28,7 @@ Version 1.5 supersedes version 1.4, the first commit of this repository (`fca645
 
 Commits after the registration add the analysis code, then the results, a replay of one case and a browser of all scored cesarean cases. Any deviation from the registration will be listed in `REPORT.md`.
 
-This is a self-registration by git commit. Commit dates are set by the author; the time of each GitHub release (here `prereg-v1.5`) is recorded by GitHub. There is no archive snapshot. The SHA-256 hashes of both files, for both versions, will be listed in `REPORT.md`.
+This is a self-registration by git commit. Commit dates are set by the author; the time of each GitHub release (here `prereg-v1.5`) is recorded by GitHub. There is no archive snapshot. The SHA-256 hashes of both files, for both versions, are listed in `REPORT.md`.
 
 ## Data
 

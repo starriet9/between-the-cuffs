@@ -1,0 +1,25 @@
+{
+ "meta": {
+  "commit": "dcd0ddd24004675e21dbaa5a9f549bbd090db134",
+  "describe": "feature-freeze-4-gdcd0ddd",
+  "state": "clean",
+  "dirty": false,
+  "status": [],
+  "tags_at_head": [],
+  "data": "VitalDB derived tables",
+  "stage": "freeze",
+  "inputs_sha256": {
+   "sdev_cases.parquet": "b98f861e3a6bbefe7e958ae713332cd40dfaeb70eaeedb0e47f4f55535598e56",
+   "sdev_readings.parquet": "095d1b829680d6811d07bd700c7d896da3b701000a0654aa3493e87fc8edd857",
+   "sdev_instances.parquet": "c07533a28aa431a2a701cb9fe8b3072b829a8e8cdc67bae3d59d03c73247f4cf",
+   "sdev_features_hr.parquet": "088938443d45c2032d89127c18b518ffdc1f2ded4b703bbff52aaa32ae4d0990",
+   "sdev_features_wf.parquet": "ed9acd2260e93820ba90c19b08911952317c845e303c34e1f0f371c4136ba835"
+  }
+ },
+ "files": {
+  "frozen/FROZEN.json": "6ecadc9d7ed2a569857c124beac92243d4ee74cd134bbc012751db6d81c8d47a",
+  "frozen/coefficients.csv": "d3c42dbcffe28f9ee35f2f9113c6d9f4aabaf65908f0cff3c8e5e099ce890587",
+  "frozen/models.pkl": "ad4c8b4702d152dff0f172a24502298be9579b6f61f7ea8caac858c28fd988c1",
+  "frozen/penalty_path.csv": "4c9b0af2147ead42ad94c0d2bde60a3fddc7bf6b3d820aadd21f104ebf18b98f"
+ }
+}

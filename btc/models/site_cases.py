@@ -300,8 +300,12 @@ def curves(frozen: dict, rows: pd.DataFrame, grid=H_GRID_S) -> tuple[np.ndarray,
 
 def build_site_cases(frozen: dict, T: Tables, source, widths: dict, fp: dict | None = None,
                      expected_n: int | None = None) -> tuple[list, dict]:
-    """([CaseSummary] for every cohort case, {caseid: CaseSeries} for every scored case)."""
+    """([CaseSummary] for every cohort case, {caseid: CaseSeries} for every scored case). The status
+    follows `btc.site.series.case_status` (SPEC §2.2): an analysable case with a recorded neuromuscular
+    blocker is "not analysed" and has no forecasts here; only analysed cases are scored."""
     from .pipeline import frozen_predictions
+    if T.include_nmb:
+        raise ExportError("the site case files use the analysed cases (SPEC §2.2), not include_nmb tables")
     fp = fp or frozen_predictions(frozen, T)
     frame, preds = fp["frame"], fp["preds"]
     if not np.array_equal(frame.index.to_numpy(), np.arange(len(frame))):
@@ -309,6 +313,10 @@ def build_site_cases(frozen: dict, T: Tables, source, widths: dict, fp: dict | N
     pp = {m: per_patient(frame["caseid"].to_numpy(int), frame["y_map"].to_numpy(float), np.asarray(preds[m]))
           for m in SITE_MODELS}
     ana = set(T.analysable["caseid"].astype(int))
+    analysed = set(T.analysed["caseid"].astype(int))
+    outside = set(frame["caseid"].astype(int)) - analysed
+    if outside:
+        raise ExportError(f"forecasts of cases that are not analysed (SPEC §2.2): {sorted(outside)[:5]}")
     need_cols = sorted(set(frame.columns) - {c for c in frame.columns if "@" in c and not c.endswith(f"@{REAL}")})
     summaries, series = [], {}
     for row in T.cases.sort_values("caseid").to_dict("records"):
@@ -322,13 +330,17 @@ def build_site_cases(frozen: dict, T: Tables, source, widths: dict, fp: dict | N
         base = dict(caseid=cid, n_readings=n_valid, median_interval_s=_num(cuff.median_interval(rd, *WINDOW_S)),
                     phenylephrine_ug=_num(chart["phenylephrine_ug"]), ephedrine_mg=_num(chart["ephedrine_mg"]),
                     pump_track=bool(chart["pump_present"]), pump_changes=pump_changes(pt, pv))
-        if cid not in ana:
-            summaries.append(S.CaseSummary(status="not analysable", reason=_reason(row, n_valid), **base))
-            continue
         m = (frame["caseid"] == cid).to_numpy()
         n_fc = int(m.sum())
-        if n_fc < MIN_FORECASTS_RMSE:
-            summaries.append(S.CaseSummary(status="not scored", n_forecasts=n_fc,
+        status = S.case_status(cid in ana, cid in ana and cid not in analysed, n_fc >= MIN_FORECASTS_RMSE)
+        if status == "not analysable":
+            summaries.append(S.CaseSummary(status=status, reason=_reason(row, n_valid), **base))
+            continue
+        if status == "not analysed":
+            summaries.append(S.CaseSummary(status=status, reason=S.NMB_REASON, **base))
+            continue
+        if status == "not scored":
+            summaries.append(S.CaseSummary(status=status, n_forecasts=n_fc,
                                            reason=f"{n_fc} scored forecasts (3 needed)", **base))
             continue
         cs, ser = _scored_case(frozen, cid, row, frame.loc[m], {k: np.asarray(p)[m] for k, p in preds.items()},

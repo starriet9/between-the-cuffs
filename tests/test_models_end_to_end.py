@@ -91,6 +91,17 @@ def test_scripts_end_to_end_deterministic_and_run_once(tmp_path):
         (a / "sob" / "frozen_scoring" / "MANIFEST.json").read_text())["files"]
     dq = json.loads((a / "sob" / "after_frozen_scoring" / "summary.json").read_text())["data_quality"]
     assert (dq["n_analysable"], dq["n_nmb_recorded"], dq["n_analysed"]) == (20, 1, 19)
+    # per-patient public tables in place of the withheld per-forecast files, for S-dev and S-ob
+    pub = tmp_path / "public"
+    r = _script("scripts/export_public_tables.py", "--results", str(a), "--out", str(pub))
+    assert r.returncode == 0, r.stderr
+    for rel in ("sdev/confirmatory", "sob/frozen_scoring", f"sob/frozen_scoring/{NMB_DIR}"):
+        man = json.loads((pub / rel / "public_tables.json").read_text())
+        assert man["checks"] and all(man["checks"].values()), rel
+    y = pd.read_csv(pub / "sob" / "frozen_scoring" / "per_patient_yardstick.csv", skiprows=1)
+    assert {"rmse_T-ia", "rmse_LH-ia", "rmse_M2 2-ahead"} <= set(y.columns)
+    w = pd.read_csv(pub / "sob" / "frozen_scoring" / NMB_DIR / "per_patient_primary_wide.csv", skiprows=1)
+    assert int(w["nmb_recorded"].sum()) == 1 and int(w["entered"].sum()) == sens["n"]
     # a second scoring is refused, also with --rerun-after-crash
     for extra in ([], ["--rerun-after-crash"]):
         r = _script("scripts/run_frozen_scoring.py", "score", "--synthetic", "--wf-signal", "2", "--out-dir", str(a),

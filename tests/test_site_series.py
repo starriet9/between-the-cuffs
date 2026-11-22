@@ -25,7 +25,7 @@ from btc.models.synthetic import SyntheticSignals, make_synthetic
 from btc.site import fixtures as FX
 from btc.site.featured import MIN_FORECASTS_FEATURED, select_featured
 from btc.site.results import consistency_problems, load_site_data
-from btc.site.series import load_cases
+from btc.site.series import NMB_REASON, load_cases
 from btc.site.theme import SYNTHETIC_MARK
 
 from test_cohorts_provenance import _script as builder, fake_sob  # noqa: F401  (fixture)
@@ -162,12 +162,15 @@ def test_cases_json_covers_every_cohort_case(chain):
     assert syn_flag is True and d["meta"]["stage"] == P.AFTER_LABEL
     sob = chain["syn"]["sob"]["cases"].set_index("caseid")
     assert sorted(c.caseid for c in cases) == sorted(sob.index) and len(cases) == 21
+    frz = json.loads((chain["out"] / "sob/frozen_scoring/summary.json").read_text())
     for c in cases:
         if not bool(sob.loc[c.caseid, "analysable"]):
             assert c.status == "not analysable" and c.reason
+        elif bool(sob.loc[c.caseid, "nmb_recorded"]):                 # SPEC §2.2: analysable, not analysed
+            assert c.status == "not analysed" and c.reason == NMB_REASON and c.n_forecasts is None
         else:
             assert c.status in ("scored", "not scored")
-    frz = json.loads((chain["out"] / "sob/frozen_scoring/summary.json").read_text())
+    assert sum(c.status == "not analysed" for c in cases) == frz["n_nmb_recorded_cases"] == 1
     scored = [c for c in cases if c.scored]
     assert len(scored) == frz["n"] == len(series)
     pp = _csv(chain["out"] / "sob/frozen_scoring/per_patient_primary.csv")

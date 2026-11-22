@@ -10,7 +10,7 @@ import pandas as pd
 
 from .analyses import Scored
 from .bootstrap import SubjectBootstrap, percentile_ci
-from .constants import (CONFORMAL_LEVEL, HR_COLS, HYPO_MAP_MMHG, HYPO_REL_BASELINE, HYPO_SBP_MMHG,
+from .constants import (CONFORMAL_LEVEL, DROPPED, HR_COLS, HYPO_MAP_MMHG, HYPO_REL_BASELINE, HYPO_SBP_MMHG,
                         LARGE_CHANGE_MMHG, MIN_USABLE_WINDOWS, MINUTES_PER_ALARM_RATE, N_BINS,
                         QUALITY_SHARE_CUT, WF_COLS)
 from .ridge import ChainFit, CVResult
@@ -232,22 +232,105 @@ def conformal_apply(frame, preds, widths: dict) -> pd.DataFrame:
 # Coefficients, penalties, dropped blocks (§6.7)
 # ----------------------------------------------------------------------------
 
+def block_kind(block) -> str:
+    """"hr" or "waveform" for a block of heart-rate or waveform features (any variant), else the
+    block's own name (e.g. the availability-indicator ablation block)."""
+    base = {c.split("@")[0] for c in block.cols}
+    if base <= set(HR_COLS):
+        return "hr"
+    if base <= set(WF_COLS):
+        return "waveform"
+    return block.name
+
+
+def _design_columns(d) -> list:
+    """(block index, Block or None, kind of column, raw-column index) per design column, in the
+    order of `Design._raw` (cuff block first). Checked against `d.names`."""
+    out = [(0, None, "cuff", None) for _ in d.cuff_cols] + [(0, None, "h", None)]
+    out += [(0, None, "cuff*h", None) for _ in d.cuff_inter] + [(0, None, "extra", None) for _ in d.extra_cols]
+    names = list(d.cuff_cols) + ["h"] + [f"{c}*h^{p}" for c, p in d.cuff_inter] + list(d.extra_cols)
+    for bi, b in enumerate(d.blocks, start=1):
+        k = d.keep[bi - 1]
+        if b.kind == "indicator":
+            out += [(bi, b, "indicator", j) for j in k]
+            names += [b.cols[j] for j in k]
+            continue
+        out += [(bi, b, "feature", j) for j in range(len(b.cols))]
+        names += list(b.cols)
+        if d.pooled:
+            out += [(bi, b, "feature*h", j) for j in range(len(b.cols))]
+            names += [f"{c}*h" for c in b.cols]
+        out += [(bi, b, "missing", j) for j in k]
+        names += [f"miss:{b.cols[j]}" for j in k]
+    if names != list(d.names):
+        raise RuntimeError("design columns do not follow Design._raw")
+    return out
+
+
 def coefficient_table(fit: ChainFit) -> pd.DataFrame:
-    """Standardised coefficients of every stage of a chain fitted on all S-dev."""
+    """Every stage of a chain fitted on all S-dev, one row per design column, enough to apply the
+    model without unpickling it (SPEC §4.5; `btc/models/design.py`, `ridge.py`):
+
+    forecast change = coef of "(intercept)" + sum over columns of coef * (raw - scaler_mean) / scaler_sd,
+
+    forecast = last cuff value + change. `block` is cuff, hr or waveform; `penalty` is that block's
+    own penalty (the cuff block keeps M2's, §4.1); the intercept is not penalised. A raw feature
+    that is missing takes `impute_median`; a `*h` column is (imputed feature - impute_median) times
+    the horizon column `h_input` (minutes); a `miss:` column is 1 where the feature is missing (merged
+    with identical indicators). `requires`: the stage is applied only where that column is true,
+    else the stage below. A "(dropped)" row: the stage returns the stage below (§4.5). `node` is
+    `pooled`, or `bin<i>` for an h-bin fitted on its own (§4.1); a forecast whose h-bin has no node
+    of its own uses `pooled`."""
     rows = []
     for node, nf in fit.nodes.items():
         for s, st in enumerate(nf.stages):
-            name = fit.spec.stages[s]
-            lam = nf.lam[s]
+            base = {"chain": fit.spec.name, "node": node, "model": fit.spec.stages[s]}
+            spec_block = fit.spec.blocks[s - 1] if s else None
             if st.dropped:
-                rows.append({"chain": fit.spec.name, "node": node, "model": name, "column": "(dropped)",
-                             "block": None, "coef": np.nan, "penalty": None})
+                rows.append({**base, "column": "(dropped)",
+                             "block": block_kind(spec_block) if spec_block else "cuff",
+                             "block_name": spec_block.name if spec_block else "cuff",
+                             "penalty": "dropped" if nf.lam[s] is DROPPED else nf.lam[s]})
                 continue
-            rows.append({"chain": fit.spec.name, "node": node, "model": name, "column": "(intercept)",
-                         "block": None, "coef": st.b0, "penalty": None})
-            for c, blk, b in zip(st.design.names, st.design.block_of, st.beta):
-                rows.append({"chain": fit.spec.name, "node": node, "model": name, "column": c,
-                             "block": int(blk), "coef": float(b), "penalty": lam})
+            d = st.design
+            lamvec = [nf.lam[0]] + [nf.lam[i] for i in range(1, s + 1) if nf.lam[i] is not DROPPED]
+            if len(lamvec) != len(d.blocks) + 1:
+                raise RuntimeError("penalties and active blocks do not line up")
+            rows.append({**base, "column": "(intercept)", "coef": float(st.b0), "requires": st.requires})
+            for c, (bi, blk, kind, j), b, mu, sd in zip(d.names, _design_columns(d), st.beta, d.mean, d.sd):
+                med = d.med[bi - 1] if bi else None
+                h_input = (d.hcol if kind in ("h", "cuff*h") else blk.hcol if kind == "feature*h" else None)
+                rows.append({**base, "column": c, "block": block_kind(blk) if blk else "cuff",
+                             "block_name": blk.name if blk else "cuff", "block_index": int(bi),
+                             "coef": float(b), "penalty": float(lamvec[bi]),
+                             "scaler_mean": float(mu), "scaler_sd": float(sd),
+                             "impute_median": float(med[j]) if med is not None and kind in ("feature", "feature*h")
+                             else None,
+                             "h_input": h_input, "requires": st.requires})
+    cols = ["chain", "node", "model", "column", "block", "block_name", "block_index", "coef", "penalty",
+            "scaler_mean", "scaler_sd", "impute_median", "h_input", "requires"]
+    return pd.DataFrame(rows).reindex(columns=cols)
+
+
+def penalty_path_table(fit: ChainFit) -> pd.DataFrame:
+    """The registered penalty selection of a chain fitted on all S-dev, as kept by `ridge.refit_chain`
+    (`keep_crit`): for every node and stage, the inner-CV criterion (patient-level mean RMSE, mmHg,
+    §4.5) of every candidate ("dropped" and each grid penalty), and the one chosen. A by-product of
+    the registered selection, not a pre-specified output."""
+    rows = []
+    for node, nf in fit.nodes.items():
+        if len(nf.crit) != len(fit.spec.stages):
+            raise RuntimeError(f"chain {fit.spec.name}, node {node}: no selection path kept (keep_crit)")
+        for s, crit in enumerate(nf.crit):
+            blk = fit.spec.blocks[s - 1] if s else None
+            chosen = "dropped" if nf.lam[s] is DROPPED else nf.lam[s]
+            if chosen not in crit:
+                raise RuntimeError(f"chain {fit.spec.name}, node {node}: chosen penalty not on the path")
+            for cand, v in crit.items():
+                rows.append({"chain": fit.spec.name, "node": node, "model": fit.spec.stages[s],
+                             "block": block_kind(blk) if blk else "cuff", "block_name": blk.name if blk else "cuff",
+                             "candidate": cand, "inner_cv_patient_mean_rmse": float(v),
+                             "chosen": cand == chosen})
     return pd.DataFrame(rows)
 
 

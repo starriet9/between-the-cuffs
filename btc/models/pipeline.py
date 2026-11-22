@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import hashlib
 import pickle
+import re
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
@@ -333,6 +334,36 @@ def gb_sdev(ctx: Context, w: Writer, n_jobs: int, n_boot: int) -> dict:
 # ----------------------------------------------------------------------------
 
 FROZEN_FILE = "models.pkl"
+PENALTY_PATH_FILE = "penalty_path.csv"
+PENALTY_PATH_NOTE = ("by-product of the registered penalty selection of the all-S-dev refit (SPEC §4.5): the "
+                     "inner-CV criterion of every candidate; not a pre-specified output")
+_ABS_PATH = re.compile(r"^(/|~[/\\]|[A-Za-z]:[\\/]|\\\\)")
+
+
+def software_versions() -> dict:
+    """Versions that the pickled models depend on (SPEC §10)."""
+    import platform
+
+    import scipy
+    import sklearn
+    return {"python": platform.python_version(), "numpy": np.__version__, "pandas": pd.__version__,
+            "scikit-learn": sklearn.__version__, "scipy": scipy.__version__}
+
+
+def check_portable(blob: bytes) -> None:
+    """The pickled models must hold no file-system path: no string in the pickle that is an absolute
+    path or holds a backslash, and none of the local roots (repository, home and temporary folders)
+    anywhere in its bytes."""
+    import pickletools
+    import tempfile
+    from .. import paths
+    roots = {str(paths.ROOT), str(Path.home()), tempfile.gettempdir()}
+    bad = sorted(r for r in roots if len(r) > 1 and r.encode() in blob)
+    for op, arg, _ in pickletools.genops(blob):
+        if isinstance(arg, str) and (_ABS_PATH.match(arg) or "\\" in arg):
+            bad.append(arg)
+    if bad:
+        raise RuntimeError(f"the frozen models hold file-system paths: {bad[:3]}")
 
 
 def freeze(T: Tables, w: Writer, n_jobs: int = 1, expected_structure: tuple | None = None) -> dict:
@@ -357,15 +388,24 @@ def freeze(T: Tables, w: Writer, n_jobs: int = 1, expected_structure: tuple | No
     p = w.out / "frozen" / FROZEN_FILE
     p.parent.mkdir(parents=True, exist_ok=True)
     blob = pickle.dumps(frozen, protocol=5)
+    check_portable(blob)
     p.write_bytes(blob)
     sha = hashlib.sha256(blob).hexdigest()
     w.files[f"frozen/{FROZEN_FILE}"] = sha
-    w.csv("frozen/coefficients.csv", pd.concat([sec.coefficient_table(f) for f in fits.values()], ignore_index=True))
+    # `frozen_chain` is the key of each chain in FROZEN.json "chains" (and in models.pkl)
+    keyed = lambda fn: pd.concat([fn(f).assign(frozen_chain=k) for k, f in fits.items()], ignore_index=True)
+    first = lambda d: d[["frozen_chain", *[c for c in d.columns if c != "frozen_chain"]]]
+    w.csv("frozen/coefficients.csv", first(keyed(sec.coefficient_table)))
+    w.csv(f"frozen/{PENALTY_PATH_FILE}", first(keyed(sec.penalty_path_table)))
     w.json("frozen/FROZEN.json", {"stage": "freeze (SPEC §9 step 6)", "models_file": FROZEN_FILE,
                                   "models_sha256": sha, "m2_structure": {"form": form, "structure": structure},
                                   "chains": {k: list(v.spec.stages) for k, v in fits.items()},
                                   "n_sdev_cases": len(frozen["sdev_cases"]),
-                                  "sdev_case_counts": T.counts()})
+                                  "sdev_case_counts": T.counts(),
+                                  "software": software_versions(),
+                                  "pickle_protocol": 5,
+                                  "coefficients_file": "coefficients.csv",
+                                  "penalty_path_file": PENALTY_PATH_FILE, "penalty_path_note": PENALTY_PATH_NOTE})
     return frozen
 
 

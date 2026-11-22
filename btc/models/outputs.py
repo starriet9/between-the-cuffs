@@ -32,6 +32,37 @@ def git_meta() -> dict:
             "status": st["status"], "tags_at_head": tags}
 
 
+def tracked_files_modified(g: dict | None) -> bool | None:
+    """Whether a git state, from `git_meta()` or from a result file's `meta`, had a modified, staged or
+    deleted tracked file. Reads both formats: `state`/`dirty`/`status` (current) and the earlier
+    `tracked_files_modified` (written before untracked files were counted, e.g. by the confirmatory
+    run at tag `feature-freeze`). None if the state is unknown or not recorded."""
+    g = g or {}
+    if "state" in g:
+        if g["state"] == "unknown":
+            return None
+        if g["state"] == "clean":
+            return False
+        if "status" in g:
+            # porcelain lists tracked changes before untracked files, so a truncated list ("...")
+            # has no tracked change after its shown lines
+            return any(not (s.startswith("?? ") or s == "...") for s in g["status"])
+        return bool(g.get("dirty"))           # no status: count any change [judgment: conservative]
+    if "tracked_files_modified" in g:
+        v = g["tracked_files_modified"]
+        return None if v is None else bool(v)
+    return None
+
+
+def untracked_files(g: dict | None) -> list | None:
+    """Untracked paths of a git state (current format only; None for the earlier format, which did
+    not record them)."""
+    g = g or {}
+    if "status" not in g:
+        return None
+    return [s[3:].strip().strip('"') for s in g["status"] if s.startswith("?? ")]
+
+
 def _clean(o):
     if isinstance(o, dict):
         return {str(k): _clean(v) for k, v in o.items()}

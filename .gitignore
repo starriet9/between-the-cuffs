@@ -11,3 +11,9 @@ build/
 
 # Synthetic test outputs of the model code (scripts/run_confirmatory.py --synthetic)
 results_synthetic/
+
+# Per-forecast result files: they hold VitalDB cuff values (y_map, last_map) with case IDs and times,
+# so they are not distributed (results/README.md). Their SHA-256 are in the MANIFEST.json of the run
+# that wrote them; scripts/export_public_tables.py writes the per-patient tables that are committed.
+results/**/predictions_primary.csv
+results/**/yardstick_predictions.csv

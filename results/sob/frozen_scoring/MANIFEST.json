@@ -1,0 +1,37 @@
+{
+ "meta": {
+  "commit": "ea852f09266bd83beb4cc0b7e6e6d2bba807b866",
+  "describe": "models-frozen",
+  "state": "clean",
+  "dirty": false,
+  "status": [],
+  "tags_at_head": [
+   "models-frozen"
+  ],
+  "data": "VitalDB derived tables",
+  "stage": "frozen S-ob scoring",
+  "frozen_tag": "models-frozen",
+  "inputs_sha256": {
+   "sob_cases.parquet": "fd2da87a67332d4ed7d0c9dcf02a3c7705f81321e0616362bc1106e7090972b0",
+   "sob_readings.parquet": "5c60717e5777d034934613aaf3bc285168f83f99515f9acb7fa6fa1800f4b6f5",
+   "sob_instances.parquet": "8ee35ca178e18006031f78c09d660f993f8a56f31c88786b3c449b7b5f7650a2",
+   "sob_features_hr.parquet": "7018681ce280d86ed1565c08a6191574a65207c5600690357545e523aa1ed143",
+   "sob_features_wf.parquet": "23a63a6b8c6c2054c2379d62acd473b1f7d8902864dc2df04f34b0c722968e45"
+  },
+  "frozen_models_sha256": "ad4c8b4702d152dff0f172a24502298be9579b6f61f7ea8caac858c28fd988c1"
+ },
+ "files": {
+  "frozen_scoring/contrasts.csv": "a08caf5c7fcffa5b753273583435eef26b6e15913ba745d03d1eaa97d429af08",
+  "frozen_scoring/headline.md": "1641b46a625b6c95ee5d3aaa41b8d7e9ccf2c1392d6fbbce436d4ad4c484823c",
+  "frozen_scoring/model_summary.csv": "853fa7d92c4f8f4fca3529855aed2df467ccb3f5da82a5176088823a62948d16",
+  "frozen_scoring/per_patient_primary.csv": "cdd48c845f8e93d65c300eb8b9c4cadf049373daadf4e552f439887c95e8609a",
+  "frozen_scoring/predictions_primary.csv": "5d4c6a5e4388f4c78ad6b739b7df0b9f9fba525d83d17adcb6f43c8928b3acd2",
+  "frozen_scoring/sensitivity_including_nmb/contrasts.csv": "d348801fec78ad68c46e1012904da5995a91525044b24cdfd909914ccf7aab5c",
+  "frozen_scoring/sensitivity_including_nmb/model_summary.csv": "54e1fbff7116248085b5fc6e81d9afa96b1e1663d69e6c51ade624221184987f",
+  "frozen_scoring/sensitivity_including_nmb/per_patient_primary.csv": "690d79fbad4f4c0eb570e19cbbf1b5a18d49482ae2f6644dea4564fd1b56f07e",
+  "frozen_scoring/sensitivity_including_nmb/predictions_primary.csv": "3953ef4b3c1548220a081b9c02809133f8d8d953addf3a80b18249b358ebdcc6",
+  "frozen_scoring/sensitivity_including_nmb/summary.json": "1340e82d1d0b2f8281f4b19f909022379e20428bcbf69b06faab565564e569c4",
+  "frozen_scoring/summary.json": "33cc676e376a385e77cfd222434e82726597aa34f27902793232bed958532090",
+  "frozen_scoring/yardstick_predictions.csv": "e79236bce4762156fe47331823ef0f7cbdfc9956b87527fa0c677bc87478367f"
+ }
+}

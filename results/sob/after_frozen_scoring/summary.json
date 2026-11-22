@@ -1,0 +1,188 @@
+{
+ "meta": {
+  "commit": "ea852f09266bd83beb4cc0b7e6e6d2bba807b866",
+  "describe": "models-frozen",
+  "state": "dirty",
+  "dirty": true,
+  "status": [
+   "?? results/sob/"
+  ],
+  "tags_at_head": [
+   "models-frozen"
+  ],
+  "data": "VitalDB derived tables",
+  "stage": "computed after the frozen scoring (SPEC §9 step 8); cannot change Sentences 1-3"
+ },
+ "label": "computed after the frozen scoring (SPEC §9 step 8); cannot change Sentences 1-3",
+ "yardstick_with_ia": {
+  "n_patients": 18,
+  "n_triples": 263,
+  "N": -0.025240778112404882,
+  "N_lo": -0.08235189991276134,
+  "N_hi": 0.03517438288951921,
+  "D": 1.9644078433444,
+  "D_lo": 0.5762344388339441,
+  "D_hi": 3.7132456187156335,
+  "F": -0.012849051788264352,
+  "F_lo": -0.050669241011203896,
+  "F_hi": 0.02486564904218803,
+  "F_reported": true,
+  "n_resamples_D_le_0": 4,
+  "rmse_L": 11.950236426410703,
+  "rmse_LH": 11.958157670007338,
+  "rmse_T": 11.975477204523107,
+  "rmse_LH-P1": 12.04173418721004,
+  "rmse_T-P1": 12.086673404946737,
+  "rmse_LH-ia": 12.106512863920434,
+  "rmse_T-ia": 12.106512863920434,
+  "rmse_U": 9.985828583066302,
+  "rmse_M2 2-ahead": 11.941241825639882,
+  "T_minus_TP1": {
+   "model": "T",
+   "comparator": "T-P1",
+   "n_patients": 18,
+   "mean_model": 11.975477204523107,
+   "mean_comp": 12.086673404946737,
+   "delta": -0.11119620042362932,
+   "delta_lo": -0.37946824040824645,
+   "delta_hi": 0.1593952911073504,
+   "rr": 0.009199901138895683,
+   "rr_lo": -0.012744574886236027,
+   "rr_hi": 0.03307177370817191,
+   "meets_rule": false
+  },
+  "placebo_guard_passed": false,
+  "ia": {
+   "N": -0.15627643750973164,
+   "N_lo": -0.6112626352548369,
+   "N_hi": 0.2566390433516965,
+   "D": 1.9644078433444,
+   "D_lo": 0.5762344388339441,
+   "D_hi": 3.7132456187156335,
+   "F": -0.07955396738982234,
+   "F_lo": -0.3418653959147075,
+   "F_hi": 0.21991635280308444,
+   "F_reported": true,
+   "n_resamples_D_le_0": 4
+  }
+ },
+ "data_quality": {
+  "n_cases": 21,
+  "n_analysable": 20,
+  "n_nmb_recorded": 1,
+  "n_analysed": 19,
+  "nmb_recorded_caseids": [
+   4952
+  ],
+  "not_analysable_reasons": {
+   "lt6_valid_readings_primary": 1
+  },
+  "readings_analysed_cases": 1052,
+  "readings_dropped_by_reason": {
+   "": 1043,
+   "incomplete": 8,
+   "map_range": 1
+  },
+  "gaps_flagged": 123,
+  "n_primary_forecasts": 284,
+  "hr_missing_share_any": 0.06690140845070422,
+  "hr_missing_share_by_column": {
+   "hr_level": 0.04225352112676056,
+   "hr_change": 0.06690140845070422,
+   "hr_slope": 0.04225352112676056
+  },
+  "waveform_coverage": 1.0,
+  "waveform_missing_share_by_column_given_available": {
+   "wf_pat_lvl": 0.05985915492957746,
+   "wf_pat_chg": 0.0,
+   "wf_rise_lvl": 0.0,
+   "wf_rise_chg": 0.0,
+   "wf_width_lvl": 0.0,
+   "wf_width_chg": 0.0,
+   "wf_bav_lvl": 0.0,
+   "wf_bav_chg": 0.0
+  },
+  "p1_waveform_coverage": 0.9964788732394366
+ },
+ "gradient_boosting_appendix": {
+  "GB-full vs GB-cuff": {
+   "model": "GB-full",
+   "comparator": "GB-cuff",
+   "n_patients": 19,
+   "mean_model": 10.92839323174929,
+   "mean_comp": 10.802031739684745,
+   "delta": 0.12636149206454483,
+   "delta_lo": -0.009840266243163675,
+   "delta_hi": 0.30991579414156467,
+   "rr": -0.011697937490807053,
+   "rr_lo": -0.027886052887294305,
+   "rr_hi": 0.0009271360976611652,
+   "meets_rule": false
+  },
+  "GB-hr vs GB-cuff": {
+   "model": "GB-hr",
+   "comparator": "GB-cuff",
+   "n_patients": 19,
+   "mean_model": 10.836570589875977,
+   "mean_comp": 10.802031739684745,
+   "delta": 0.034538850191232484,
+   "delta_lo": -0.005533490353379555,
+   "delta_hi": 0.07678063902430059,
+   "rr": -0.003197440168995591,
+   "rr_lo": -0.006750771453584298,
+   "rr_hi": 0.0005604192616388099,
+   "meets_rule": false
+  },
+  "GB-full vs GB-full-P1": {
+   "model": "GB-full",
+   "comparator": "GB-full-P1",
+   "n_patients": 19,
+   "mean_model": 10.92839323174929,
+   "mean_comp": 10.81520080283697,
+   "delta": 0.11319242891232051,
+   "delta_lo": -0.03406252497300799,
+   "delta_hi": 0.3187697346761479,
+   "rr": -0.010466049680984968,
+   "rr_lo": -0.028138936882330767,
+   "rr_hi": 0.0033041730389177597,
+   "meets_rule": false
+  },
+  "GB-cuff vs M2": {
+   "model": "GB-cuff",
+   "comparator": "M2",
+   "n_patients": 19,
+   "mean_model": 10.802031739684745,
+   "mean_comp": 10.927969711860726,
+   "delta": -0.12593797217598102,
+   "delta_lo": -0.5146767382647346,
+   "delta_hi": 0.3665094097273757,
+   "rr": 0.011524370536943662,
+   "rr_lo": -0.03584613587668356,
+   "rr_hi": 0.04642810226987284,
+   "meets_rule": false
+  }
+ },
+ "gradient_boosting_settings": {
+  "GB-cuff": [
+   0.03,
+   3,
+   100
+  ],
+  "GB-hr": [
+   0.03,
+   3,
+   100
+  ],
+  "GB-full": [
+   0.03,
+   3,
+   100
+  ],
+  "GB-full-P1": [
+   0.03,
+   3,
+   100
+  ]
+ },
+ "hypotension_line_sob": "New-onset readings below 80% of the record-start baseline flagged one reading ahead (secondary, descriptive): S-ob: M2 3/28 (0.21 false alarms per 30 min), M3 3/28 (0.21 false alarms per 30 min), M4 2/28 (0.11 false alarms per 30 min), M4-P1 3/28 (0.21 false alarms per 30 min)."
+}

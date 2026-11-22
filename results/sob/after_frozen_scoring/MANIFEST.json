@@ -1,0 +1,27 @@
+{
+ "meta": {
+  "commit": "ea852f09266bd83beb4cc0b7e6e6d2bba807b866",
+  "describe": "models-frozen",
+  "state": "dirty",
+  "dirty": true,
+  "status": [
+   "?? results/sob/"
+  ],
+  "tags_at_head": [
+   "models-frozen"
+  ],
+  "data": "VitalDB derived tables",
+  "stage": "computed after the frozen scoring (SPEC \u00a79 step 8); cannot change Sentences 1-3"
+ },
+ "files": {
+  "after_frozen_scoring/conformal.csv": "91a2082e6648b0790e39285cb0904f310949dbdb10f3f358e078954a7d4bc906",
+  "after_frozen_scoring/hypotension.csv": "d04ae0a94b8854f9fc301234098cc607fee9de826dd43a4262c31008347a0bb2",
+  "after_frozen_scoring/large_changes.csv": "f7df97f7e570b03ca06190d3979dd4c4b3fdaffe9341ed649f39da1cba79587d",
+  "after_frozen_scoring/readme_block5.md": "46d09a62145186864f2d97e2517430612138f83744719b2440cb80832cd4d4d3",
+  "after_frozen_scoring/restricted_contrasts.csv": "f5d5f2e03c27136847b0d37b6d847f999733c73de37adf5e2ca8eb6879e6662e",
+  "after_frozen_scoring/restricted_summary.csv": "846273683880170ab368211823cae16924b3287e1859db5b9902a2dee854e145",
+  "after_frozen_scoring/summary.json": "2d806f16417c5f74427b1875af3810e7b7d69cd2f3d6cb947515be58a2dab46a",
+  "after_frozen_scoring/variants_contrasts.csv": "6d8288b68a4d77189665612885ed3107156adc391bb27858ad8c2e5c8bee00ef",
+  "after_frozen_scoring/variants_summary.csv": "d79fe214be9c15d0116867c7ae41b3c5ecfd516fde720ba209f2b84c95b7456f"
+ }
+}

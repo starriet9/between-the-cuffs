@@ -1,0 +1,6 @@
+# {"commit": "0669d0c742c102ccf741bd5782517848ae7f377e", "describe": "feature-freeze", "data": "VitalDB derived tables (derived/sdev_*.parquet)", "stage": "sdev"}  (read with skiprows=1)
+bin,n_targets,n_patients,n_targets_with_waveform,n_patients_with_waveform,n_targets_fast_cycling,n_patients_fast_cycling
+15-90 s,425,75,406,73,318,30
+90-150 s,309,125,300,124,40,21
+150-210 s,356,121,353,120,27,16
+210-400 s,331,132,327,131,29,19

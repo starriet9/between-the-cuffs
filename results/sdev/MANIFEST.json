@@ -28,6 +28,22 @@
   "confirmatory/per_patient_primary.csv": "1ffabb99e97b9644e06898ebb325120cbc4946864659ea497cdaf8d2f106d46c",
   "confirmatory/predictions_primary.csv": "46f2f9eb45d66f919eec69825eb8b00dfe6155606b2a6a6a25a5fa5bed206505",
   "confirmatory/summary.json": "fa87b9b8e9e7d4a12eb91b6859ebfa8b6690dc4f9059c68a0963d740a614f6b9",
-  "confirmatory/yardstick_predictions.csv": "f332219562bfa7ec0629586961dadee7557944e98d7f317e735473a8421da0ba"
+  "confirmatory/yardstick_predictions.csv": "f332219562bfa7ec0629586961dadee7557944e98d7f317e735473a8421da0ba",
+  "secondary/coefficients_all_sdev.csv": "7102e1475770fead5b11fa12dd032b06f562f1079b51cf12d075a37442e90da6",
+  "secondary/conformal.csv": "aff5df6901cee39103f4d9a84d2a7942a298ca5892660ace65a48ee934ec5274",
+  "secondary/dropped_blocks_outer_folds.csv": "b3ab5ba546a2353b17d920259de8f0c139dadef14847dca18be07893b7d67b9f",
+  "secondary/fold_seed_sensitivity.csv": "1d87f8047293865b171098ea2700810f33ff95e862933d5ede4ae62103f6367f",
+  "secondary/gb_settings.csv": "9deffaad59a10ca8493b54e19aa7e1a820be0057c2cada7a601cef7f8487ac71",
+  "secondary/gb_summary.csv": "56d29dfca3805b00c4a7401344af60a33c94d732f6aa4f492300bcc180f2b6ae",
+  "secondary/hypotension.csv": "a10951705bd4826d3148f2d5586cd01bd583476405f12b71c3f593f2e73c95b7",
+  "secondary/large_changes.csv": "90f460c982e664c8e6308b51be6d3fcf08baa71cc8df98b1bde8e65fb798080b",
+  "secondary/penalties.csv": "4cf32ab65cd0d4efbdc9264f6f9b8c8b820b64ab8fb9409ae2f95225b809f9c8",
+  "secondary/restricted_contrasts.csv": "aa9276dbb48f709e23daac61d71df87321e7126cfbccbb6a515dae0f96bb2905",
+  "secondary/restricted_summary.csv": "d6941daad1fa78a80b953d3f07ec7ac3f94d9adefe79df10617074d4347c2732",
+  "secondary/sensitivity_including_nmb_folds.csv": "3124c12e029fc7c9917c96f56f36be760774daeb8f35a6750ffd541ab8061bea",
+  "secondary/summary.json": "2a931906616eddc813f0c4fef8ddd525d30a6ae2a741e031a60813bad43c1791",
+  "secondary/training_base_per_bin.csv": "f51804217c5af29b8e84c0f2334fe66c9a5a113897f23a9125b96f164e44f5a4",
+  "secondary/variants_contrasts.csv": "1e4b5ed94ab32fc1cc71aee3d3c0fff9b73580c7e43f2f1429093c64d9214316",
+  "secondary/variants_summary.csv": "0e09c029f6fab52778f727ff8865adb4cb852b81f8989fef88ef46f1f99b098d"
  }
 }

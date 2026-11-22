@@ -1,0 +1,4 @@
+{"time_utc": "2026-11-22T19:38:48+00:00", "event": "started", "commit": "ea852f09266bd83beb4cc0b7e6e6d2bba807b866", "describe": "models-frozen", "data": "VitalDB derived tables", "frozen_tag": "models-frozen", "rerun_after_crash": false}
+{"time_utc": "2026-11-22T19:38:48+00:00", "event": "completed", "commit": "ea852f09266bd83beb4cc0b7e6e6d2bba807b866"}
+{"time_utc": "2026-11-22T19:39:02+00:00", "event": "after_frozen_scoring_written", "commit": "ea852f09266bd83beb4cc0b7e6e6d2bba807b866", "frozen_tag": "models-frozen"}
+{"time_utc": "2026-11-22T19:39:04+00:00", "event": "site_cases_written", "commit": "ea852f09266bd83beb4cc0b7e6e6d2bba807b866", "frozen_tag": "models-frozen", "n_files": 20, "cases_json_sha256": "5d0da1c8e29987d53d367918ecfdbac02472e4706a1371db293263361df9dbd7"}

@@ -1,0 +1,6 @@
+# {"commit": "0669d0c742c102ccf741bd5782517848ae7f377e", "describe": "feature-freeze", "data": "VitalDB derived tables (derived/sdev_*.parquet)", "stage": "sdev"}  (read with skiprows=1)
+chain,node,model,n_folds_dropped,n_folds
+ladder:real/real,pooled,M3,0,5
+ladder:real/real,pooled,M4,0,5
+ladder:p1/p1,pooled,M3-P1,4,5
+ladder:p1/p1,pooled,M4-P1,3,5

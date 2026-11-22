@@ -1,0 +1,26 @@
+{
+ "meta": {
+  "commit": "44cfb63cd7ddb274af6aedd95c5ebc4b9fec409e",
+  "describe": "models-frozen-1-g44cfb63",
+  "stage": "public per-patient table (scripts/export_public_tables.py)"
+ },
+ "folder": "sob/frozen_scoring/sensitivity_including_nmb",
+ "files": {
+  "per_patient_primary_wide.csv": "ed5d23c0d3d0cba53d5ba4eb06deccabdbfddce3daa4d872ecb8e7f61a289785"
+ },
+ "sources": {
+  "predictions_primary.csv": {
+   "sha256": "3953ef4b3c1548220a081b9c02809133f8d8d953addf3a80b18249b358ebdcc6",
+   "manifest": "sob/frozen_scoring/MANIFEST.json",
+   "commit": "ea852f09266bd83beb4cc0b7e6e6d2bba807b866",
+   "describe": "models-frozen",
+   "data": "VitalDB derived tables",
+   "stage": "frozen S-ob scoring"
+  }
+ },
+ "checks": {
+  "rmse_equal_to_per_patient_primary": true,
+  "entering_patients_forecasts_and_delta_equal_to_summary": true
+ },
+ "note": "The sources hold VitalDB cuff values and are not distributed; the tables written here are per-patient summaries (results/README.md)."
+}

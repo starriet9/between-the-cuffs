@@ -1,0 +1,36 @@
+{
+ "meta": {
+  "commit": "44cfb63cd7ddb274af6aedd95c5ebc4b9fec409e",
+  "describe": "models-frozen-1-g44cfb63",
+  "stage": "public per-patient table (scripts/export_public_tables.py)"
+ },
+ "folder": "sob/frozen_scoring",
+ "files": {
+  "per_patient_primary_wide.csv": "947c7e21a02d4c9e375c29de4ac11278be01424fec33375afcde2b6b0545e3d5",
+  "per_patient_yardstick.csv": "87e207c76cafc5a620d53ba9056bd9f8d66518086e6389c2f7aac2dbd5cb0496"
+ },
+ "sources": {
+  "predictions_primary.csv": {
+   "sha256": "5d4c6a5e4388f4c78ad6b739b7df0b9f9fba525d83d17adcb6f43c8928b3acd2",
+   "manifest": "sob/frozen_scoring/MANIFEST.json",
+   "commit": "ea852f09266bd83beb4cc0b7e6e6d2bba807b866",
+   "describe": "models-frozen",
+   "data": "VitalDB derived tables",
+   "stage": "frozen S-ob scoring"
+  },
+  "yardstick_predictions.csv": {
+   "sha256": "e79236bce4762156fe47331823ef0f7cbdfc9956b87527fa0c677bc87478367f",
+   "manifest": "sob/frozen_scoring/MANIFEST.json",
+   "commit": "ea852f09266bd83beb4cc0b7e6e6d2bba807b866",
+   "describe": "models-frozen",
+   "data": "VitalDB derived tables",
+   "stage": "frozen S-ob scoring"
+  }
+ },
+ "checks": {
+  "rmse_equal_to_per_patient_primary": true,
+  "entering_patients_forecasts_and_delta_equal_to_summary": true,
+  "yardstick_patients_triples_N_D_equal_to_summary": true
+ },
+ "note": "The sources hold VitalDB cuff values and are not distributed; the tables written here are per-patient summaries (results/README.md)."
+}

@@ -30,6 +30,7 @@ The case ID and `subjectid` are VitalDB case-table fields. They are kept in `fol
 
 **`sdev/`**: the confirmatory S-dev run (`SPEC.md` §9 steps 4-5), at tag `feature-freeze`.
 - `MANIFEST.json`: SHA-256 of every file of the run; `meta` gives the commit, the tag, the git state and the SHA-256 of the derived input tables.
+- `data_checksums.csv`: the data snapshot (`SPEC.md` §10). The SHA-256 of every stored track array of the 252 downloaded S-dev cases (columns `caseid`, `array`, `dtype`, `n`, `sha256`; checksums only, no data), downloaded on 2026-11-19 (UTC). It is a copy of `data/raw/sdev_checksums.csv`, written by `scripts/download.py`. A fresh download writes the same list there; a difference shows a change in the public data.
 - `confirmatory/summary.json`: the question, the answer line, Sentences 1 and 3, the selected row of the decision table with G and g, every contrast, the fast-cycling contrast, the yardstick, and the case counts (analysable, with a recorded neuromuscular blocker, analysed).
 - `confirmatory/headline.md`: the answer line and Sentences 1 and 3.
 - `confirmatory/contrasts.csv`, `confirmatory/contrasts_fast_cycling.csv`: Δ and relative reduction with 95% CIs.
@@ -57,7 +58,7 @@ The case ID and `subjectid` are VitalDB case-table fields. They are kept in `fol
 
 1. Download the S-dev cases and build the derived tables (`data/`, not committed): `scripts/download.py --cohort sdev`, then `scripts/build_instances.py`, `scripts/build_windows.py` and `scripts/build_features_wf.py`, each with `--cohort sdev`.
 2. Check out tag `feature-freeze` and run `python scripts/run_confirmatory.py --feature-tag feature-freeze --out-dir <folder>`. The confirmatory result is the run made at that tag (`SPEC.md` §9 step 5). With the same derived tables (`meta.inputs_sha256` in `sdev/MANIFEST.json`) and the locked environment (`uv.lock`), every file listed in `sdev/MANIFEST.json`, the two withheld files included, has the same SHA-256 in `<folder>/sdev/`.
-3. `python scripts/export_public_tables.py --results <folder>` writes the per-patient tables next to them.
+3. Back at the latest commit, `python scripts/export_public_tables.py --results <folder>` writes the per-patient tables next to them.
 
 Regenerating `sob/` also needs the cesarean cases, which the code downloads only with `BTC_FROZEN_SCORING=1` (`SPEC.md` §9 step 7), and `scripts/run_frozen_scoring.py score --frozen-tag <tag>` at the frozen-model tag (`after` and `series` need the same `--frozen-tag` and checks).
 

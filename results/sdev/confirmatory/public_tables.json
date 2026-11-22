@@ -1,0 +1,36 @@
+{
+ "meta": {
+  "commit": "678884537f78d805cfafb669a24641c910a3e570",
+  "describe": "feature-freeze-3-g6788845",
+  "stage": "public per-patient table (scripts/export_public_tables.py)"
+ },
+ "folder": "sdev/confirmatory",
+ "files": {
+  "per_patient_primary_wide.csv": "5d8dffb5ea7a06e998ead28caa252ea6a11df001ab51e2ac0f894193b7e52d34",
+  "per_patient_yardstick.csv": "b5cf129bd47ae30617ff1c29fa22a85e7fb84d055364ddc82075aea179a13689"
+ },
+ "sources": {
+  "predictions_primary.csv": {
+   "sha256": "46f2f9eb45d66f919eec69825eb8b00dfe6155606b2a6a6a25a5fa5bed206505",
+   "manifest": "sdev/MANIFEST.json",
+   "commit": "0669d0c742c102ccf741bd5782517848ae7f377e",
+   "describe": "feature-freeze",
+   "data": "VitalDB derived tables (derived/sdev_*.parquet)",
+   "stage": "sdev"
+  },
+  "yardstick_predictions.csv": {
+   "sha256": "f332219562bfa7ec0629586961dadee7557944e98d7f317e735473a8421da0ba",
+   "manifest": "sdev/MANIFEST.json",
+   "commit": "0669d0c742c102ccf741bd5782517848ae7f377e",
+   "describe": "feature-freeze",
+   "data": "VitalDB derived tables (derived/sdev_*.parquet)",
+   "stage": "sdev"
+  }
+ },
+ "checks": {
+  "rmse_equal_to_per_patient_primary": true,
+  "entering_patients_forecasts_and_delta_equal_to_summary": true,
+  "yardstick_patients_triples_N_D_equal_to_summary": true
+ },
+ "note": "The sources hold VitalDB cuff values and are not distributed; the tables written here are per-patient summaries (results/README.md)."
+}

@@ -1,0 +1,6 @@
+# {"commit": "0669d0c742c102ccf741bd5782517848ae7f377e", "describe": "feature-freeze", "data": "VitalDB derived tables (derived/sdev_*.parquet)", "stage": "sdev"}  (read with skiprows=1)
+form,structure,patient_mean_rmse,chosen
+a,perbin,8.759304749322206,False
+a,pooled,8.672159372827439,True
+b,perbin,8.86402749698741,False
+b,pooled,8.732167143629285,False

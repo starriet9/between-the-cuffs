@@ -13,7 +13,7 @@
  "scored_date": "2026-11-23",
  "scored_ref": "44cfb63",
  "deviations": 0,
- "reproduce_command": "{{REPRODUCE_COMMAND}}",
+ "reproduce_command": "uv run --locked scripts/reproduce.py",
  "checksums_path": "results/data_checksums.csv",
  "narrated_replay_url": null,
  "pdf_url": null,

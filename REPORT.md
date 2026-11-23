@@ -881,6 +881,8 @@ Of the 1,552 primary next-reading forecasts in the 214 analysable cases, 97.7% h
 
 Python 3.13.15 (`.python-version`); every imported package is pinned exactly in `pyproject.toml`, and `uv.lock` pins the full environment. Every derived table and log records the git commit and state of the code that wrote it; a builder refuses to run from uncommitted code unless told to, and then records that. Every generated Markdown report carries the VitalDB credit. S-ob signals can be read or downloaded only with `BTC_FROZEN_SCORING=1`, which is set only from the frozen scoring on (the scoring run and the S-ob exports that follow it).
 
+**One command** repeats every stage from the public VitalDB API and compares every result file with the published SHA-256: `uv run --locked scripts/reproduce.py` (from a clone at `main`; `--help` lists the options). It runs the original scripts in temporary git worktrees at the commits recorded in the MANIFEST files (tag `feature-freeze`, commit `dcd0ddd`, tag `models-frozen`), re-exports the public tables at the commits recorded in `public_tables.json`, and writes `build/reproduce/report.md`. On the original machine, with the S-dev data already downloaded, the S-dev and freeze stages took 42 s and all 42 compared items were identical (2026-11-23). The S-ob stage was tested only on synthetic inputs, so that the cesarean cases stay scored once by the author; a third party's run of it is a reproduction, not a second scoring. A new tag on any commit the MANIFEST files record would change the recorded `describe` field, and so every hash. A full fresh run downloads about 1.7 GB.
+
 ## Deviations
 
 None. The list was checked again on 2026-11-23, after the cesarean scoring and the secondary analyses.

@@ -15,7 +15,7 @@ Two cohorts are used. **S-dev** is the development cohort: the non-cesarean spin
 | 6. Models frozen | done; commit `ea852f0`, 2026-11-23 04:29; public release 2026-11-22 19:37:25 UTC (tag `models-frozen`) |
 | 7. S-ob scored once | done, 2026-11-23 04:38 (2026-11-22 19:38:48 UTC), at tag `models-frozen`; see "Cesarean cases (S-ob)" |
 | 8. Remaining analyses and replays | S-ob analyses after the frozen scoring: done, 2026-11-23 04:39, at tag `models-frozen`. S-dev secondary analyses and gradient-boosting check: done, 2026-11-23 04:50, at tag `feature-freeze` (see "Secondary analyses (S-dev)"). Per-case series for the replays and the case browser: written 2026-11-23 04:39, at tag `models-frozen` (log event `site_cases_written`) |
-| Exploratory encoder check (`SPEC.md` §6.8) | pending; see "Exploratory pretrained-encoder check" |
+| Exploratory encoder check (`SPEC.md` §6.8) | done 2026-11-23: S-dev run at `d66ad63`, cesarean appendix run once at `dda1d6d`; rule not met; see "Exploratory pretrained-encoder check" |
 
 ## Why it matters
 
@@ -899,7 +899,7 @@ The following are not deviations from `PREREG.md`. They are listed so that nothi
 - **`after` and `series` ran with `results/sob/` untracked.** Their `meta` records `state` "dirty" (`results/sob/after_frozen_scoring/MANIFEST.json`; the series files are VitalDB-derived and not committed) because the scoring's own outputs were not yet committed. The guard allows untracked files inside `results/` only ("Scoring record").
 - **Scope of the S-ob sensitivity scoring.** The scoring on all analysable cases covers the ladder and its placebo versions, not the yardstick models. `SPEC.md` §9 step 7 says that the frozen models are also scored on all analysable cases; `SPEC.md` §6.7 defines this sensitivity analysis for M2–M4.
 - **S-ob counts differ from G0.** Under the final rule, 19 cases are analysed, not 20; case 4147 has 2 valid readings in the window, not 3; and the hypotension events are counted among the scored at-risk forecasts, not among all readings ("Cohort flow, S-ob"). The recount at the scoring is registered (`SPEC.md` §2.2).
-- **Encoder check built alongside the site and this report.** `SPEC.md` §6.8 says that the pretrained-encoder check "is built only if everything else is finished". Its plan, `ENCODER_PLAN.md`, was committed on 2026-11-23, and the check is being built while the web page and this file are completed; `ENCODER_PLAN.md` §10 sets a cut-off by the clock. The check is exploratory, may be omitted (`SPEC.md` §6.8), and changes no registered outcome, rule or sentence.
+- **Encoder check built alongside the site and this report.** `SPEC.md` §6.8 says that the pretrained-encoder check "is built only if everything else is finished". Its plan, `ENCODER_PLAN.md`, was committed and pushed on 2026-11-23 before any encoder output was computed, and the check was built while the web page and this file were being completed; `ENCODER_PLAN.md` §10 set a cut-off by the clock, and the check finished before it. The check is exploratory, may be omitted (`SPEC.md` §6.8), and changes no registered outcome, rule or sentence.
 - **Optional exploratory analyses not run.** The whole-record window, the 3-reading-ahead targets, lead–lag, within-case relative amplitude, the S-dev AUROC and the leave-one-patient-out refit inside S-ob were not run. `SPEC.md` §6.8 allows them to be omitted.
 - **Post hoc material.** "Why it matters", "How to read these numbers", "Reading the result" and `results/frozen/penalty_path.csv` were not pre-specified and are labelled as such (`PREREG.md` §10).
 - **Withheld files.** The five per-forecast result files (two of S-dev, three of S-ob) are not published ("Data and result files"); per-patient tables are published in their place.
@@ -917,7 +917,74 @@ The following are not deviations from `PREREG.md`. They are listed so that nothi
 
 ## Exploratory pretrained-encoder check (`ENCODER_PLAN.md`)
 
-Status: pending. The plan was committed and pushed before any encoder output was computed (commit `29db44b`, pushed 2026-11-23T03:54:36Z per GitHub's activity record). Its results will be listed here as `ENCODER_PLAN.md` §9 specifies.
+Exploratory. It changes no registered outcome, rule or sentence (`SPEC.md` §6.8). Everything below is listed as `ENCODER_PLAN.md` §9 specifies.
+
+- **Plan.** `ENCODER_PLAN.md`, SHA-256 `5e1bc2c18362d9ad872321b8174c5aced5017fbe56dc4fcca973ad06501dc95f`, committed and pushed before any encoder output was computed (commit `29db44b`, pushed 2026-11-23T03:54:36Z per GitHub's activity record), and unchanged since. Every result file records this (`meta.plan`, `meta.plan_public`).
+- **One-line summary** (the plan's fixed wording, `results/sdev/exploratory_encoder/summary.md`): "An exploratory check replaced the hand-crafted pleth features with embeddings from a frozen pretrained PPG encoder (PaPaGei-S) in the same model. It did not meet the rule either: −0.1% against the cuff-only model (95% CI −0.3% to 0.0%)." The embedding block was dropped in 4 of the 5 outer folds, not in all 5, so the plan's extra sentence for "dropped in every fold" does not apply.
+- **Encoder.** PaPaGei-S weights from Zenodo record 13983110 (MD5 `a4cdb32392e2a7b25999128af92813b5`, SHA-256 `79d68671e51bdc951fee853e5a8241099e38148ff26ed888b843849332e0b988`), downloaded at run time by `scripts/download_encoder.py` and not redistributed. The model class is vendored in `btc/third_party/` with its licence. torch 2.15.0 (CPU build), one thread per worker, deterministic algorithms.
+- **Build check (§5), before any blood-pressure model.** Ridge on the 512 standardised embedding dimensions predicted each window's pleth pulse rate with an out-of-fold R² of 0.687 (threshold 0.5) over 61,341 usable windows of the 203 analysed cases; per outer fold 0.701, 0.671, 0.687, 0.670 and 0.703; out-of-fold RMSE 8.0 beats/min against a pulse-rate SD of 14.3 (`build_check.json`). The processed window's dominant frequency was within 0.2 Hz of the raw one in 99.1% of the 75,557 windows (reported only).
+- **Inputs.** 75,557 usable windows of the 250 S-dev cases with windows were embedded. Every forecast uses exactly M4's windows (checked on all rows). 1,386 of the 1,421 primary forecasts have embedding features (97.5%); the other 35 fall back to the M3 forecast and are bit-identical to M4's fallback forecasts.
+- **Same machinery.** The re-derived M2, M3 and M3-P1 stages are bit-identical to the confirmatory forecasts, and the recomputed M4 vs M2 contrast equals the confirmatory summary.
+- **Penalties.** The embedding block was dropped in 4 of the 5 outer folds (penalty 1000 in the other); the placebo embedding block was dropped in all 5 (`penalties.csv`, `dropped_blocks_outer_folds.csv`).
+
+**S-dev, outer cross-validation (N = 200).** Patient-level mean RMSE, mmHg (95% CI), from `results/sdev/exploratory_encoder/model_summary.csv`:
+
+| Model | Mean RMSE (95% CI) |
+|---|---:|
+| M2 | 8.67 (7.95 to 9.44) |
+| M3 | 8.68 (7.96 to 9.44) |
+| M4 | 8.68 (7.97 to 9.44) |
+| M4-P1 | 8.67 (7.95 to 9.44) |
+| M4-enc | 8.68 (7.96 to 9.45) |
+| M4-enc-P1 | 8.67 (7.95 to 9.44) |
+
+Contrasts from `results/sdev/exploratory_encoder/contrasts.csv` (paired subject bootstrap, 2,000 resamples, seed 20261118). Δ is the first model's RMSE minus the second's, so a positive Δ and a negative relative reduction both mean a higher error:
+
+| Subset | Contrast | Patients | Δ, mmHg (95% CI) | Relative reduction (95% CI) | Meets the rule |
+|---|---|---:|---:|---:|---|
+| all | M4-enc vs M2 | 200 | 0.0126 (−0.0021 to 0.0287) | −0.14% (−0.33% to 0.02%) | no |
+| all | M4-enc vs M3 | 200 | 0.0044 (0.0009 to 0.0083) | −0.05% (−0.10% to −0.01%) | no |
+| all | M4-enc vs M4 | 200 | 0.0034 (−0.0152 to 0.0224) | −0.04% (−0.26% to 0.18%) | no |
+| all | M4-enc-P1 vs M2 | 200 | 0.0024 (−0.0022 to 0.0071) | −0.03% (−0.08% to 0.03%) | no |
+| all | M4-enc vs M4-enc-P1 | 200 | 0.0101 (−0.0061 to 0.0274) | −0.12% (−0.32% to 0.07%) | no |
+| all | M4 vs M2 | 200 | 0.0091 (−0.0142 to 0.0327) | −0.11% (−0.38% to 0.16%) | no |
+| fast_cycling | M4-enc vs M2 | 30 | −0.0067 (−0.0242 to 0.0135) | 0.07% (−0.16% to 0.27%) | no |
+
+The rule is not met, so placebo validity is not evaluated (`SPEC.md` §6.3). The CI of M4-enc vs M4 includes zero, so, as the plan fixes, no statement is made on whether the embeddings do better or worse than the hand-crafted features. M4-enc vs M3 has a CI that excludes zero in the direction of a higher error (0.004 mmHg).
+
+**Cesarean cases (`ENCODER_PLAN.md` §7), computed after the frozen scoring, appendix only.** The code of this step was written after the S-dev encoder result was known (commit `dda1d6d`; the plan fixes what it does and says it runs whatever the S-dev result shows). It ran once, with the network off and `BTC_FROZEN_SCORING=1` for that process only, and its results are commit `29416b3`. M4-enc and M4-enc-P1 were refitted on all 203 analysed S-dev cases with the freeze step's own function; the refitted M2 and M3 stages equal the frozen models parameter for parameter, and their S-ob forecasts are bit-identical to the frozen scoring's. The refit dropped the embedding block in both chains, so on S-ob M4-enc equals M3 and M4-enc-P1 equals M2 exactly. 7,046 windows of 20 cases were embedded (the 19 analysed cases and the placebo donors, which include case 4952); all 284 forecasts have embedding features. One-line summary (written for this step; the plan has no fixed S-ob sentence): "Exploratory, computed after the frozen scoring: in the 19 cesarean cases (a case series), the relative reduction of next-reading MAP forecast error by M4-enc against the cuff-only model was 0.0% (95% CI −0.1% to 0.0%)." The fast-cycling row is omitted for S-ob.
+
+**S-ob, computed after the frozen scoring (n = 19, a case series).** Patient-level mean RMSE, mmHg (95% CI), from `results/sob/after_frozen_scoring/exploratory_encoder/model_summary.csv`:
+
+| Model | Mean RMSE (95% CI) |
+|---|---:|
+| M2 | 10.93 (8.49 to 13.69) |
+| M3 | 10.93 (8.49 to 13.69) |
+| M4 | 10.93 (8.48 to 13.72) |
+| M4-P1 | 10.92 (8.49 to 13.69) |
+| M4-enc | 10.93 (8.49 to 13.69) |
+| M4-enc-P1 | 10.93 (8.49 to 13.69) |
+
+Contrasts from `results/sob/after_frozen_scoring/exploratory_encoder/contrasts.csv` (paired subject bootstrap, 2,000 resamples, seed 20261118). Δ is the first model's RMSE minus the second's, so a positive Δ and a negative relative reduction both mean a higher error:
+
+| Subset | Contrast | Patients | Δ, mmHg (95% CI) | Relative reduction (95% CI) | Meets the rule |
+|---|---|---:|---:|---:|---|
+| all | M4-enc vs M2 | 19 | 0.0014 (−0.0041 to 0.0070) | −0.01% (−0.06% to 0.04%) | no |
+| all | M4-enc vs M3 | 19 | 0.0000 (0.0000 to 0.0000) | 0.00% (0.00% to 0.00%) | no |
+| all | M4-enc vs M4 | 19 | 0.0023 (−0.0419 to 0.0413) | −0.02% (−0.40% to 0.38%) | no |
+| all | M4-enc-P1 vs M2 | 19 | 0.0000 (0.0000 to 0.0000) | 0.00% (0.00% to 0.00%) | no |
+| all | M4-enc vs M4-enc-P1 | 19 | 0.0014 (−0.0041 to 0.0070) | −0.01% (−0.06% to 0.04%) | no |
+| all | M4 vs M2 | 19 | −0.0010 (−0.0421 to 0.0443) | 0.01% (−0.41% to 0.40%) | no |
+
+**Disclosures (`ENCODER_PLAN.md` §8).**
+- **Pretraining overlap.** PaPaGei was pretrained on unlabelled `SNUADC/PLETH` of 5,866 VitalDB participants. The case list is not published, so any case here, in S-dev or S-ob, may have been seen. No blood-pressure or clinical label was used in pretraining. The overlap can only help the encoder on these recordings: it could inflate a gain, and it does not explain a null [judgment].
+- **Licence.** The code is BSD-3-Clause. The Zenodo record states no licence for the weights, so they are downloaded by the user and not re-hosted.
+- **Differences from the authors' examples.** The filter runs on each 10-s window, not on the whole recording, so that no later sample can enter; this adds edge effects. It is written in second-order sections, so its padding may differ from pyPPG's `filtfilt` [unverified]. Segments are selected by this project's quality index, not by the authors' flat-line and morphology filters. Embeddings enter as within-case differences, not as per-subject averages.
+- **Timing.** The plan was fixed after the registered results were known.
+
+**Departures from `ENCODER_PLAN.md`.**
+- The S-dev embeddings were built twice. The first build's log recorded the torch settings of the parent process instead of the workers'; the record was fixed (commit `a07e0d2`) and the embeddings were rebuilt before any blood-pressure model was fitted. Both builds gave byte-identical arrays.
+- The S-ob code was written after the S-dev result was known (above), and the S-ob fast-cycling row is omitted.
 
 ---
 

@@ -91,6 +91,11 @@ The case ID and `subjectid` are VitalDB case-table fields. They are kept in `fol
   - `hypotension.csv`, `large_changes.csv`, `conformal.csv`: as in `sdev/secondary/`; the interval half-widths come from all S-dev outer-fold residuals.
   - `readme_block5.md`: the README table (S-dev and S-ob columns) and the hypotension line. The line holds the S-ob half only, because `sdev/secondary/hypotension.csv` did not exist when `after` ran; `REPORT.md` ("Hypotension line, both cohorts") gives the line for both cohorts.
   - `MANIFEST.json`: SHA-256 of the files above.
+  - `exploratory_encoder/`: the cesarean step of the exploratory encoder check (`ENCODER_PLAN.md` §7), run once at commit `dda1d6d` after the frozen scoring; appendix only. `summary.json`, `summary.md` (with the departures from the plan), `contrasts.csv`, `model_summary.csv`, `refit_penalties.csv`, the per-patient tables (`per_patient_primary.csv`, `per_patient_primary_wide.csv`, `public_tables.json`) and `MANIFEST.json`. The per-forecast `predictions_primary.csv` is listed in the manifest and not committed.
+
+### `sdev/exploratory_encoder/` (`ENCODER_PLAN.md`)
+
+The exploratory encoder check on S-dev: PaPaGei-S embeddings in place of the hand-crafted waveform features, in the same ridge model and outer folds. `build_check.json` (the signal-level build check, run at `a07e0d2` before any blood-pressure model), `summary.json`, `summary.md` (the one-line summary and the plan's disclosures), `contrasts.csv`, `model_summary.csv`, `penalties.csv`, `dropped_blocks_outer_folds.csv`, the per-patient tables and `MANIFEST.json`, written at `d66ad63`. Every file's `meta` records the plan's SHA-256 and its public commit. The embeddings themselves are derived from VitalDB signals and are not published; `scripts/build_embeddings.py` rebuilds them (`btc/SCHEMA.md` §4d). The S-dev contrasts can be recomputed from `per_patient_primary_wide.csv`.
 
 ## Regenerating the withheld files
 

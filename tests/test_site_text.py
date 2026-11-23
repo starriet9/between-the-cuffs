@@ -115,7 +115,7 @@ def test_readme_block_order_and_page_order(rendered):
     order = re.findall(r'data-block="(\d)"', html)
     assert order == ["1", "2", "3", "4", "5", "6", "7", "8"]
     assert html.index('id="cases"') < html.index('id="models"') and html.index('id="check"') < html.index('id="credit"')
-    assert md.index("![Left: one cesarean case") < md.index(md_escape_s1(site))
+    assert md.index("![Left, an illustrative case") < md.index(md_escape_s1(site))
 
 
 def test_credit_on_both(rendered):

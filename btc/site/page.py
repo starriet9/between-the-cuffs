@@ -199,7 +199,7 @@ def cases_html(site, assets) -> str:
                   '<button type="button" class="nav-btn" data-nav="1" aria-label="Next case">Next →</button></div>')
     return (f'<section id="cases" class="block" data-block="4" aria-labelledby="cases-h">'
             f'<h2 id="cases-h">All {n} scored cesarean cases</h2>'
-            f'<p class="caption">{e(T.SHEET_CAPTION)}</p>{controls}'
+            f'<p class="caption">{e(T.SHEET_CAPTION)} {e(T.FORECAST_TIMING_NOTE)}</p>{controls}'
             f'<ol class="sheet" id="sheet">{"".join(tiles)}</ol>'
             f'<div class="viewer" id="viewer" tabindex="-1" aria-label="Case viewer">{viewer_nav}'
             f'<div class="case-list">{"".join(arts)}</div></div></section>')

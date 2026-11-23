@@ -28,8 +28,13 @@ CREDIT_STATEMENT = ("Derived from VitalDB (CC BY 4.0). Changes: cuff readings ex
                     "derived. No attempt was made to identify any person.")
 NOT_ADVICE = "Research prototype, not medical advice."
 
-SUMMARY_ALT = ("Left: one cesarean case (VitalDB case {cid}, chosen by a pre-set rule) with cuff readings, "
-               "forecasts, heart rate and pleth. Right: error reduction against the cuff-only model, with 95% CIs.")
+SUMMARY_ALT = ("Left, an illustrative case: one cesarean case (VitalDB case {cid}, chosen by a pre-set rule) with cuff "
+               "readings, forecasts, heart rate and pleth. Right, the primary result: error reduction against the "
+               "cuff-only model, with 95% CIs, in the {N} non-cesarean cases (filled) and the cesarean case series "
+               "(hollow).")
+FORECAST_TIMING_NOTE = ("Each forecast is issued at a cuff reading and scored at the time the next reading was "
+                        "actually taken, an interval that a real-time forecast would not know; REPORT.md also gives "
+                        "the analysis with that interval replaced by the median of the previous intervals.")
 
 # Block 2 readings, taken from SPEC §7 (the pre-written outcome readings)
 MEANING_POSITIVE = ("Heart rate and the pleth may partly stand in for the missing drug input. Such a result cannot "
@@ -190,7 +195,7 @@ def block1(site) -> Block:
              {"label": h.label, "rest": emphasised(h.answer_rest, h.emphasis)}),
         Unit("cesarean", [t(h.cesarean_line)]),
         Unit("registration", reg, {"nodes": nodes, "chips": chips}),
-        Unit("figure", [], {"alt": SUMMARY_ALT.format(cid=rule1), "img": "img/summary.png"}),
+        Unit("figure", [], {"alt": SUMMARY_ALT.format(cid=rule1, N=h.N), "img": "img/summary.png"}),
         Unit("links", links_line(site)),
         Unit("sentence", [t(h.sentence_1)]),
         Unit("sentence", [t(h.sentence_2)]),

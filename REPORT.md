@@ -4,6 +4,8 @@ This file gives the confirmatory result on the non-cesarean cases, how to read i
 
 Two cohorts are used. **S-dev** is the development cohort: the non-cesarean spinal cases, on which every model is fitted and cross-validated. The answer to the question comes from S-dev. **S-ob** is the cesarean cohort: an external case series, scored once with the frozen models.
 
+**Contents.** [How to read these numbers](#how-to-read-these-numbers) · [What the forecasts are scored on](#what-the-forecasts-are-scored-on) · [Reading the result](#reading-the-result) · [Confirmatory result, S-dev](#confirmatory-result-s-dev) · [Cesarean cases (S-ob)](#cesarean-cases-s-ob) · [Secondary analyses (S-dev)](#secondary-analyses-s-dev) · [Gradient-boosting check](#gradient-boosting-check-specmd-68) · [Limits](#limits) · [Deviations](#deviations) · [Reproducibility](#reproducibility-specmd-10) · [Exploratory encoder check](#exploratory-pretrained-encoder-check-encoder_planmd)
+
 **Status of this version** (written after the cesarean scoring and the secondary analyses; times in KST unless marked UTC):
 
 | Step (`SPEC.md` §9) | Status |
@@ -71,6 +73,14 @@ Terms used below. MAP is mean arterial pressure. The pleth is the pulse-oximeter
 - 203 cases were analysed. 200 of them have the 3 forecasts needed for an RMSE and are scored.
 - The interval is narrow because cross-validation shrank the added coefficients heavily, so the two models gave nearly the same forecasts. The bound describes this fitted procedure and this feature set. It does not measure how much information the signals hold.
 - The last number of the third sentence comes from a harder test, in which the latest cuff reading is hidden from the model. The signals recovered none of that reading's value there.
+
+### What the forecasts are scored on
+
+*(explanatory, not pre-specified; added on 2026-11-23 after an external review of the posted results)*
+
+- **Timing.** Each forecast is issued at a cuff reading and scored at the time the next reading was actually taken. That interval, h, is an input of every model (`SPEC.md` §3) and is the one input not known when the forecast is issued, so these are forecasts conditional on the next reading's time, not real-time forecasts. With h replaced by the median of the patient's previous intervals ("Refitted variants and the feature-group ablation", S-dev), M4 vs M2 is +0.028 mmHg (95% CI 0.004 to 0.056; relative reduction −0.32%): the added signals did not help there either. Prospective scoring is part of the next experiment (`README.md`).
+- **The cuff-only structure.** The M2 structure was chosen among four on the S-dev outer-fold predictions (`SPEC.md` §4.1; "M2 structure") and is shared by M3, M4 and their placebo versions. The choice can make the absolute errors slightly optimistic; it enters both sides of the M4 vs M2 contrast [judgment]. Choosing the structure inside each outer training fold would remove that optimism.
+- **What the interval covers.** The subject bootstrap treats the fitted fold models as fixed (`SPEC.md` §6.2). Across ten fold seeds, Δ ranged from −0.004 to 0.026 mmHg ("Fold-seed sensitivity"), about the width of the CI, so the bound describes this fitted procedure at these folds, not the information the signals hold.
 
 ### Reading the result
 
@@ -887,9 +897,11 @@ Python 3.13.15 (`.python-version`); every imported package is pinned exactly in 
 
 ## Deviations
 
-None. The list was checked again on 2026-11-23, after the cesarean scoring and the secondary analyses.
+None: no deviation from the registered protocol (`PREREG.md`, `SPEC.md`). The list was checked again on 2026-11-23, after the cesarean scoring, the secondary analyses and the exploratory encoder check.
 
-The following are not deviations from `PREREG.md`. They are listed so that nothing has to be inferred:
+### Changes after registration that are not protocol deviations
+
+Changes to implementation, presentation and record-keeping made after registration, each with its reason:
 
 - **README paragraphs moved to this file.** At tag `models-frozen`, `README.md` had two short paragraphs outside the blocks of `SPEC.md` §8.1: "Why it matters" and "How to read these numbers". They were moved to this file on 2026-11-23, in the update that adds the cesarean result to `README.md`, so that `README.md` holds only its blocks. Both are labelled as not pre-specified.
 - **Secondary analyses run after the cesarean scoring, in a clone.** The S-dev secondary analyses and the gradient-boosting check ran at 04:50 KST on 2026-11-23, after the S-ob scoring (04:38), in a separate clone at tag `feature-freeze`. `SPEC.md` §9 step 8 allows this order. The run re-created the 11 confirmatory files byte-identical, so it is a rerun with unchanged code. Its manifest replaced `results/sdev/MANIFEST.json`, with `meta` and the 11 earlier entries unchanged ("Secondary analyses (S-dev)").

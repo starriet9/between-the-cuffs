@@ -393,7 +393,7 @@ def result_panel(fig, site, x0, x1, top, bottom, style: Style):
     """Relative reduction vs M2 with 95% CIs: filled = S-dev (decides), hollow = S-ob (case series)."""
     k = style.tick / 12
     num_w = 140 * k
-    ftext(fig, x0, top, "Error reduction vs cuff only", style.title, fontweight="semibold", color=INK)
+    ftext(fig, x0, top, "Primary result: error reduction vs cuff only, 95% CI", style.title, fontweight="semibold", color=INK)
     legend_h = 44 * k             # two legend rows
     label_h = 44 * k              # tick labels + axis label line
     ax_top, ax_w = top + 46 * k, (x1 - x0) - num_w
@@ -447,7 +447,7 @@ def result_panel(fig, site, x0, x1, top, bottom, style: Style):
 
 def summary_left(fig, site, s, x0, x1, top, bottom, style: Style, ncol_key=4):
     k = style.tick / 12
-    title = f"One cesarean case (VitalDB case {s.caseid}, chosen by a pre-set rule)"
+    title = f"Illustrative case: one cesarean case (VitalDB {s.caseid}, chosen by a pre-set rule)"
     lines = 1
     if ncol_key != 4:
         title, lines = title.replace(" (", "\n(", 1), 2

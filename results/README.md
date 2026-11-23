@@ -15,6 +15,8 @@ The per-forecast files below hold, for every forecast, the cuff value it targets
 | `sob/frozen_scoring/predictions_primary.csv` | `scripts/run_frozen_scoring.py score` | `sob/frozen_scoring/MANIFEST.json` |
 | `sob/frozen_scoring/yardstick_predictions.csv` | `scripts/run_frozen_scoring.py score` | `sob/frozen_scoring/MANIFEST.json` |
 | `sob/frozen_scoring/sensitivity_including_nmb/predictions_primary.csv` | `scripts/run_frozen_scoring.py score` | `sob/frozen_scoring/MANIFEST.json` |
+| `sdev/exploratory_encoder/predictions_primary.csv` | `scripts/run_encoder_check.py sdev` | `sdev/exploratory_encoder/MANIFEST.json` |
+| `sob/after_frozen_scoring/exploratory_encoder/predictions_primary.csv` | `scripts/run_encoder_sob.py` | `sob/after_frozen_scoring/exploratory_encoder/MANIFEST.json` |
 
 ### One coefficient table, omitted for its labelling
 
@@ -95,7 +97,7 @@ The case ID and `subjectid` are VitalDB case-table fields. They are kept in `fol
 
 ### `sdev/exploratory_encoder/` (`ENCODER_PLAN.md`)
 
-The exploratory encoder check on S-dev: PaPaGei-S embeddings in place of the hand-crafted waveform features, in the same ridge model and outer folds. `build_check.json` (the signal-level build check, run at `a07e0d2` before any blood-pressure model), `summary.json`, `summary.md` (the one-line summary and the plan's disclosures), `contrasts.csv`, `model_summary.csv`, `penalties.csv`, `dropped_blocks_outer_folds.csv`, the per-patient tables and `MANIFEST.json`, written at `d66ad63`. Every file's `meta` records the plan's SHA-256 and its public commit. The embeddings themselves are derived from VitalDB signals and are not published; `scripts/build_embeddings.py` rebuilds them (`btc/SCHEMA.md` §4d). The S-dev contrasts can be recomputed from `per_patient_primary_wide.csv`.
+The exploratory encoder check on S-dev: PaPaGei-S embeddings in place of the hand-crafted waveform features, in the same ridge model and outer folds. `build_check.json` (the signal-level build check, run at `a07e0d2` before any blood-pressure model), `summary.json`, `summary.md` (the one-line summary and the plan's disclosures), `contrasts.csv`, `model_summary.csv`, `penalties.csv`, `dropped_blocks_outer_folds.csv`, the per-patient tables and `MANIFEST.json`, written at `d66ad63`. Every file's `meta` records the plan's SHA-256 and its public commit. The embeddings themselves are derived from VitalDB signals and are not published; `scripts/build_embeddings.py` rebuilds them (`btc/SCHEMA.md` §4d). The S-dev contrasts can be recomputed from `per_patient_primary_wide.csv`. The per-forecast `predictions_primary.csv` is listed in the manifest and not committed (first section).
 
 ## Regenerating the withheld files
 

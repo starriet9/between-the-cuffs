@@ -902,7 +902,7 @@ The following are not deviations from `PREREG.md`. They are listed so that nothi
 - **Encoder check built alongside the site and this report.** `SPEC.md` §6.8 says that the pretrained-encoder check "is built only if everything else is finished". Its plan, `ENCODER_PLAN.md`, was committed and pushed on 2026-11-23 before any encoder output was computed, and the check was built while the web page and this file were being completed; `ENCODER_PLAN.md` §10 set a cut-off by the clock, and the check finished before it. The check is exploratory, may be omitted (`SPEC.md` §6.8), and changes no registered outcome, rule or sentence.
 - **Optional exploratory analyses not run.** The whole-record window, the 3-reading-ahead targets, lead–lag, within-case relative amplitude, the S-dev AUROC and the leave-one-patient-out refit inside S-ob were not run. `SPEC.md` §6.8 allows them to be omitted.
 - **Post hoc material.** "Why it matters", "How to read these numbers", "Reading the result" and `results/frozen/penalty_path.csv` were not pre-specified and are labelled as such (`PREREG.md` §10).
-- **Withheld files.** The five per-forecast result files (two of S-dev, three of S-ob) are not published ("Data and result files"); per-patient tables are published in their place.
+- **Withheld files.** The seven per-forecast result files (two of S-dev, three of S-ob, and one of each cohort from the exploratory encoder check) are not published ("Data and result files"); per-patient tables are published in their place.
 
 ## Appendix: gradient-boosting check on the cesarean cases
 

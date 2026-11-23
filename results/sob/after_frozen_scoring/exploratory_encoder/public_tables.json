@@ -1,0 +1,26 @@
+{
+ "meta": {
+  "commit": "dda1d6dafffe9d0a286bd69640f3a9c277b6b784",
+  "describe": "models-frozen-10-gdda1d6d",
+  "stage": "public per-patient table (scripts/export_public_tables.py)"
+ },
+ "folder": "sob/after_frozen_scoring/exploratory_encoder",
+ "files": {
+  "per_patient_primary_wide.csv": "b7e4187f4a6c45ba5939be9b729fd1d66b16151305592f5ffb4cdc93b923d447"
+ },
+ "sources": {
+  "predictions_primary.csv": {
+   "sha256": "6628e16e1e3fd97673e0d5657caed2383709fd8d2cc05d965de7ce92282e8426",
+   "manifest": "sob/after_frozen_scoring/exploratory_encoder/MANIFEST.json",
+   "commit": "dda1d6dafffe9d0a286bd69640f3a9c277b6b784",
+   "describe": "models-frozen-10-gdda1d6d",
+   "data": "VitalDB derived tables (derived/sob_*, derived/sdev_*) and encoder tables (derived/sob_enc_*, derived/sdev_enc_*)",
+   "stage": "computed after the frozen scoring (ENCODER_PLAN.md §7); appendix only; exploratory; cannot change Sentences 1-3"
+  }
+ },
+ "checks": {
+  "rmse_equal_to_per_patient_primary": true,
+  "entering_patients_forecasts_and_delta_equal_to_summary": true
+ },
+ "note": "The sources hold VitalDB cuff values and are not distributed; the tables written here are per-patient summaries (results/README.md)."
+}

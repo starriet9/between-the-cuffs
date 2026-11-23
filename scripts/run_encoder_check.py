@@ -224,6 +224,7 @@ def main(argv=None) -> int:
             "plan_public": PLAN_PUBLIC, "plan_unchanged_since_public_commit": plan_unchanged_since_public(),
             "weights": {k: emb_log["weights"][k] for k in ("file", "size", "md5", "sha256", "zenodo_record", "doi")},
             "model": emb_log["model"], "embedding_runtime": emb_log["runtime"],
+            "preprocessing": emb_log.get("preprocessing"), "preprocessing_note": E.FILTER_NOTE,
             "software": software_versions(), "embeddings_sha256": emb_sha,
             "embeddings_built_at_commit": emb_log["git"]["commit"]}
     if a.command == "build-check":

@@ -400,6 +400,7 @@ def test_run_script_end_to_end(tmp_path, monkeypatch, planted):
     assert {"summary.json", "build_check.json", "predictions_primary.csv", "summary.md"} <= set(man["files"])
     assert man["meta"]["weights"]["sha256"] == "w" and man["meta"]["plan"]["sha256"] == "p"
     assert man["meta"]["plan_public"]["commit"].startswith("29db44b")
+    assert "[unverified]" in man["meta"]["preprocessing_note"]
     pub = json.loads((out / "public_tables.json").read_text())
     assert pub["checks"]["entering_patients_forecasts_and_delta_equal_to_summary"]
     md = (out / "summary.md").read_text()

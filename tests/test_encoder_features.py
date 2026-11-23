@@ -323,6 +323,7 @@ def test_build_scripts_end_to_end(tmp_path, monkeypatch, two_cases):
     assert log["n_windows_embedded"] == int(win["usable"].sum()) and log["n_cases"] == 2
     assert log["raw_files_read"] == ["data/raw/sdev/11.npz", "data/raw/sdev/22.npz"]
     assert log["dom_freq_check"]["share_agree"] > 0.9
+    assert log["preprocessing"]["note"] == E.FILTER_NOTE
     with pytest.raises(SystemExit):
         be.main(["--jobs", "1"])                                     # never replaced in place
     # build_features_enc

@@ -89,6 +89,10 @@ SMOOTH_N = int(round(FS_IN * SMOOTH_MS / 1000.0))   # 25 samples
 Z_EPS = 1e-7
 SOS = cheby2(CHEBY_ORDER, CHEBY_RS_DB, BAND, btype="bandpass", fs=FS_IN, output="sos")
 MA = np.ones(SMOOTH_N) / SMOOTH_N
+FILTER_NOTE = ("Filter parameters as in pyPPG's preproc.py (Chebyshev II, order 4, 20 dB, 0.5-12 Hz, filtfilt; then a "
+               "50-ms moving average with filtfilt at fs >= 75 Hz), as ENCODER_PLAN.md §2 states them. Here the band-pass "
+               "runs as second-order sections (sosfiltfilt) on each 10-s window, with SciPy's default padding, so the "
+               "edge padding may differ from pyPPG's filtfilt on (b, a) coefficients [unverified].")
 
 # --------------------------------------------------------------------------- features (§2)
 N_REF = W.N_REF                  # first 6 usable windows (SPEC §4.3)

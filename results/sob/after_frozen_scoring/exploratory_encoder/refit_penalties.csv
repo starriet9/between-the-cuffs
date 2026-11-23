@@ -1,0 +1,8 @@
+# {"commit": "dda1d6dafffe9d0a286bd69640f3a9c277b6b784", "describe": "models-frozen-10-gdda1d6d", "data": "VitalDB derived tables (derived/sob_*, derived/sdev_*) and encoder tables (derived/sob_enc_*, derived/sdev_enc_*)", "stage": "computed after the frozen scoring (ENCODER_PLAN.md §7); appendix only; exploratory; cannot change Sentences 1-3"}  (read with skiprows=1)
+chain,node,model,penalty
+enc:real,pooled,M2,1.0
+enc:real,pooled,M3,31.622776601683793
+enc:real,pooled,M4-enc,dropped
+enc:p1,pooled,M2,1.0
+enc:p1,pooled,M3-P1,dropped
+enc:p1,pooled,M4-enc-P1,dropped

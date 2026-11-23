@@ -1,0 +1,26 @@
+{
+ "meta": {
+  "commit": "d66ad631230a618a66f70b26e467b73c635840b4",
+  "describe": "models-frozen-8-gd66ad63",
+  "stage": "public per-patient table (scripts/export_public_tables.py)"
+ },
+ "folder": "sdev/exploratory_encoder",
+ "files": {
+  "per_patient_primary_wide.csv": "529e3464b1fcf4cf2ebbc932a0618696cdc78dd179cc8a8165dbd6fc89b5b8e8"
+ },
+ "sources": {
+  "predictions_primary.csv": {
+   "sha256": "0379f57d36e7387a3b66964ada06e62659ca6951321b1c6f6fa24cd589c14ee4",
+   "manifest": "sdev/exploratory_encoder/MANIFEST.json",
+   "commit": "d66ad631230a618a66f70b26e467b73c635840b4",
+   "describe": "models-frozen-8-gd66ad63",
+   "data": "VitalDB derived tables (derived/sdev_*.parquet) and encoder tables (derived/sdev_enc_*)",
+   "stage": "exploratory encoder check (sdev, ENCODER_PLAN.md)"
+  }
+ },
+ "checks": {
+  "rmse_equal_to_per_patient_primary": true,
+  "entering_patients_forecasts_and_delta_equal_to_summary": true
+ },
+ "note": "The sources hold VitalDB cuff values and are not distributed; the tables written here are per-patient summaries (results/README.md)."
+}

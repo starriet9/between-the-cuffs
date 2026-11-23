@@ -24,6 +24,16 @@ dependencies = [
 
 [dependency-groups]
 dev = ["pytest==9.2.0"]
+# Exploratory encoder check only (ENCODER_PLAN.md §1): the CPU build of torch, from the index below.
+encoder = ["torch==2.15.0"]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
 
 [tool.uv]
 package = false
@@ -39,17 +49,22 @@ constraint-dependencies = [
     "cloudpickle==3.1.3",
     "contourpy==1.4.0",
     "cycler==0.12.1",
+    "filelock==4.3.0",
     "fonttools==4.68.0",
     "frozenlist==1.8.0",
     "fsspec==2026.9.0",
     "idna==3.20",
     "imageio==2.38.2",
     "iniconfig==2.3.1",
+    "jinja2==3.1.6",
     "joblib==1.6.0",
     "kiwisolver==1.5.1",
+    "markupsafe==3.0.4",
     "matplotlib==3.11.2",
+    "mpmath==1.3.0",
     "multidict==7.2.1",
     "narwhals==2.29.0",
+    "networkx==3.7",
     "neurokit2==0.3.0",
     "numpy==2.5.5",
     "packaging==26.3",
@@ -69,7 +84,9 @@ constraint-dependencies = [
     "scipy==1.18.1",
     "setuptools==81.0.0",
     "soundfile==0.14.0",
+    "sympy==1.14.0",
     "threadpoolctl==3.8.0",
+    "torch==2.15.0",
     "typing-extensions==4.16.0",
     "tzdata==2026.6",
     "urllib3==2.8.0",

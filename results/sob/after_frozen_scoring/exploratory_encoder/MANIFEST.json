@@ -1,0 +1,76 @@
+{
+ "meta": {
+  "commit": "dda1d6dafffe9d0a286bd69640f3a9c277b6b784",
+  "describe": "models-frozen-10-gdda1d6d",
+  "state": "clean",
+  "dirty": false,
+  "status": [],
+  "tags_at_head": [],
+  "data": "VitalDB derived tables (derived/sob_*, derived/sdev_*) and encoder tables (derived/sob_enc_*, derived/sdev_enc_*)",
+  "stage": "computed after the frozen scoring (ENCODER_PLAN.md \u00a77); appendix only; exploratory; cannot change Sentences 1-3",
+  "inputs_sha256": {
+   "sob_cases.parquet": "fd2da87a67332d4ed7d0c9dcf02a3c7705f81321e0616362bc1106e7090972b0",
+   "sob_readings.parquet": "5c60717e5777d034934613aaf3bc285168f83f99515f9acb7fa6fa1800f4b6f5",
+   "sob_instances.parquet": "8ee35ca178e18006031f78c09d660f993f8a56f31c88786b3c449b7b5f7650a2",
+   "sob_features_hr.parquet": "7018681ce280d86ed1565c08a6191574a65207c5600690357545e523aa1ed143",
+   "sob_features_wf.parquet": "23a63a6b8c6c2054c2379d62acd473b1f7d8902864dc2df04f34b0c722968e45"
+  },
+  "sdev_inputs_sha256": {
+   "sdev_cases.parquet": "b98f861e3a6bbefe7e958ae713332cd40dfaeb70eaeedb0e47f4f55535598e56",
+   "sdev_readings.parquet": "095d1b829680d6811d07bd700c7d896da3b701000a0654aa3493e87fc8edd857",
+   "sdev_instances.parquet": "c07533a28aa431a2a701cb9fe8b3072b829a8e8cdc67bae3d59d03c73247f4cf",
+   "sdev_features_hr.parquet": "088938443d45c2032d89127c18b518ffdc1f2ded4b703bbff52aaa32ae4d0990",
+   "sdev_features_wf.parquet": "ed9acd2260e93820ba90c19b08911952317c845e303c34e1f0f371c4136ba835"
+  },
+  "plan": {
+   "file": "ENCODER_PLAN.md",
+   "sha256": "5e1bc2c18362d9ad872321b8174c5aced5017fbe56dc4fcca973ad06501dc95f",
+   "last_commit": "29db44bb87fb766f190184003920b86486fa7d19"
+  },
+  "plan_public_commit": "29db44bb87fb766f190184003920b86486fa7d19",
+  "plan_unchanged_since_public_commit": true,
+  "written_after_sdev_result": {
+   "sdev_result_commit": "0626dd297e7b5cd63ad6d481f9bd8712730436cb",
+   "note": "this step's code was written after the S-dev encoder result was committed (ENCODER_PLAN.md \u00a77)"
+  },
+  "frozen_models_sha256": "ad4c8b4702d152dff0f172a24502298be9579b6f61f7ea8caac858c28fd988c1",
+  "frozen_predictions_sha256": "5d4c6a5e4388f4c78ad6b739b7df0b9f9fba525d83d17adcb6f43c8928b3acd2",
+  "frozen_summary_sha256": "33cc676e376a385e77cfd222434e82726597aa34f27902793232bed958532090",
+  "sdev_encoder_features_sha256": "d6a9484a8218438acba1f443e85d395b382498c443b3f662f16b56b50d1cbc9e",
+  "sdev_embeddings_sha256": "7e1c56b27f3542644dbc2fb21c1d619af70db0cb62b348e0db39c7077e98d812",
+  "weights": {
+   "file": "data/external/papagei/papagei_s.pt",
+   "size": 23339216,
+   "md5": "a4cdb32392e2a7b25999128af92813b5",
+   "sha256": "79d68671e51bdc951fee853e5a8241099e38148ff26ed888b843849332e0b988"
+  },
+  "embedding_runtime": {
+   "mkldnn_available": true,
+   "numpy": "2.5.5",
+   "scipy": "1.18.1",
+   "torch": "2.15.0+cpu",
+   "torch_deterministic": true,
+   "torch_num_interop_threads": 1,
+   "torch_num_threads": 1,
+   "workers": 8
+  },
+  "preprocessing_note": "Filter parameters as in pyPPG's preproc.py (Chebyshev II, order 4, 20 dB, 0.5-12 Hz, filtfilt; then a 50-ms moving average with filtfilt at fs >= 75 Hz), as ENCODER_PLAN.md \u00a72 states them. Here the band-pass runs as second-order sections (sosfiltfilt) on each 10-s window, with SciPy's default padding, so the edge padding may differ from pyPPG's filtfilt on (b, a) coefficients [unverified].",
+  "software": {
+   "python": "3.13.15",
+   "numpy": "2.5.5",
+   "pandas": "3.1.1",
+   "scikit-learn": "1.9.1",
+   "scipy": "1.18.1"
+  },
+  "rerun_after_crash": false
+ },
+ "files": {
+  "contrasts.csv": "84ff8c41134357c7f260893f12cdc863a665562b647927d76a60cd991a1cef29",
+  "model_summary.csv": "ea41c31858e710d0910c230f84ec4482209a64482cf308a50454cd42bf23d0c7",
+  "per_patient_primary.csv": "b952889ce227f01960d2b10b023f3fedfac446c58e42fb29ecb54b0110c30515",
+  "predictions_primary.csv": "6628e16e1e3fd97673e0d5657caed2383709fd8d2cc05d965de7ce92282e8426",
+  "refit_penalties.csv": "9ae301bb1adbf3accc996bb3758cfd58b8bef534ce7270f8da1f404f6d3daba1",
+  "summary.json": "bb7b89a19011f6378c70eb0799aea00499287848d74432a612dec4c8e04739a6",
+  "summary.md": "5a06349d9cdde8a2ea09d0e02c75a6d1da4128bf02c72d62e8d6e7f0d2a32dcf"
+ }
+}

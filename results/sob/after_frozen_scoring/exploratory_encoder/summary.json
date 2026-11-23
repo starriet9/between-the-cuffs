@@ -1,0 +1,378 @@
+{
+ "meta": {
+  "commit": "dda1d6dafffe9d0a286bd69640f3a9c277b6b784",
+  "describe": "models-frozen-10-gdda1d6d",
+  "state": "clean",
+  "dirty": false,
+  "status": [],
+  "tags_at_head": [],
+  "data": "VitalDB derived tables (derived/sob_*, derived/sdev_*) and encoder tables (derived/sob_enc_*, derived/sdev_enc_*)",
+  "stage": "computed after the frozen scoring (ENCODER_PLAN.md §7); appendix only; exploratory; cannot change Sentences 1-3",
+  "inputs_sha256": {
+   "sob_cases.parquet": "fd2da87a67332d4ed7d0c9dcf02a3c7705f81321e0616362bc1106e7090972b0",
+   "sob_readings.parquet": "5c60717e5777d034934613aaf3bc285168f83f99515f9acb7fa6fa1800f4b6f5",
+   "sob_instances.parquet": "8ee35ca178e18006031f78c09d660f993f8a56f31c88786b3c449b7b5f7650a2",
+   "sob_features_hr.parquet": "7018681ce280d86ed1565c08a6191574a65207c5600690357545e523aa1ed143",
+   "sob_features_wf.parquet": "23a63a6b8c6c2054c2379d62acd473b1f7d8902864dc2df04f34b0c722968e45"
+  },
+  "sdev_inputs_sha256": {
+   "sdev_cases.parquet": "b98f861e3a6bbefe7e958ae713332cd40dfaeb70eaeedb0e47f4f55535598e56",
+   "sdev_readings.parquet": "095d1b829680d6811d07bd700c7d896da3b701000a0654aa3493e87fc8edd857",
+   "sdev_instances.parquet": "c07533a28aa431a2a701cb9fe8b3072b829a8e8cdc67bae3d59d03c73247f4cf",
+   "sdev_features_hr.parquet": "088938443d45c2032d89127c18b518ffdc1f2ded4b703bbff52aaa32ae4d0990",
+   "sdev_features_wf.parquet": "ed9acd2260e93820ba90c19b08911952317c845e303c34e1f0f371c4136ba835"
+  },
+  "plan": {
+   "file": "ENCODER_PLAN.md",
+   "sha256": "5e1bc2c18362d9ad872321b8174c5aced5017fbe56dc4fcca973ad06501dc95f",
+   "last_commit": "29db44bb87fb766f190184003920b86486fa7d19"
+  },
+  "plan_public_commit": "29db44bb87fb766f190184003920b86486fa7d19",
+  "plan_unchanged_since_public_commit": true,
+  "written_after_sdev_result": {
+   "sdev_result_commit": "0626dd297e7b5cd63ad6d481f9bd8712730436cb",
+   "note": "this step's code was written after the S-dev encoder result was committed (ENCODER_PLAN.md §7)"
+  },
+  "frozen_models_sha256": "ad4c8b4702d152dff0f172a24502298be9579b6f61f7ea8caac858c28fd988c1",
+  "frozen_predictions_sha256": "5d4c6a5e4388f4c78ad6b739b7df0b9f9fba525d83d17adcb6f43c8928b3acd2",
+  "frozen_summary_sha256": "33cc676e376a385e77cfd222434e82726597aa34f27902793232bed958532090",
+  "sdev_encoder_features_sha256": "d6a9484a8218438acba1f443e85d395b382498c443b3f662f16b56b50d1cbc9e",
+  "sdev_embeddings_sha256": "7e1c56b27f3542644dbc2fb21c1d619af70db0cb62b348e0db39c7077e98d812",
+  "weights": {
+   "file": "data/external/papagei/papagei_s.pt",
+   "size": 23339216,
+   "md5": "a4cdb32392e2a7b25999128af92813b5",
+   "sha256": "79d68671e51bdc951fee853e5a8241099e38148ff26ed888b843849332e0b988"
+  },
+  "embedding_runtime": {
+   "mkldnn_available": true,
+   "numpy": "2.5.5",
+   "scipy": "1.18.1",
+   "torch": "2.15.0+cpu",
+   "torch_deterministic": true,
+   "torch_num_interop_threads": 1,
+   "torch_num_threads": 1,
+   "workers": 8
+  },
+  "preprocessing_note": "Filter parameters as in pyPPG's preproc.py (Chebyshev II, order 4, 20 dB, 0.5-12 Hz, filtfilt; then a 50-ms moving average with filtfilt at fs >= 75 Hz), as ENCODER_PLAN.md §2 states them. Here the band-pass runs as second-order sections (sosfiltfilt) on each 10-s window, with SciPy's default padding, so the edge padding may differ from pyPPG's filtfilt on (b, a) coefficients [unverified].",
+  "software": {
+   "python": "3.13.15",
+   "numpy": "2.5.5",
+   "pandas": "3.1.1",
+   "scikit-learn": "1.9.1",
+   "scipy": "1.18.1"
+  },
+  "rerun_after_crash": false
+ },
+ "stage": "exploratory encoder check, S-ob after the frozen scoring (ENCODER_PLAN.md §7)",
+ "label": "computed after the frozen scoring (ENCODER_PLAN.md §7); appendix only; exploratory; cannot change Sentences 1-3",
+ "n": 19,
+ "n_forecasts": 284,
+ "n_forecasts_all": 284,
+ "n_forecasts_encoder_available": 284,
+ "n_forecasts_encoder_available_p1": 283,
+ "encoder_coverage": 1.0,
+ "n_analysable_cases": 20,
+ "n_nmb_recorded_cases": 1,
+ "n_analysed_cases": 19,
+ "nmb_recorded_caseids": [
+  4952
+ ],
+ "include_nmb": false,
+ "rmse_patient_mean": {
+  "M2": {
+   "mean": 10.927969711860726,
+   "ci_lo": 8.493363292359202,
+   "ci_hi": 13.688708011368242
+  },
+  "M3": {
+   "mean": 10.929324856174242,
+   "ci_lo": 8.490144619604774,
+   "ci_hi": 13.691738646727732
+  },
+  "M4": {
+   "mean": 10.926979642311018,
+   "ci_lo": 8.481049323532693,
+   "ci_hi": 13.717628343794024
+  },
+  "M4-P1": {
+   "mean": 10.924309314226003,
+   "ci_lo": 8.490400722824354,
+   "ci_hi": 13.686223250871098
+  },
+  "M4-enc": {
+   "mean": 10.929324856174242,
+   "ci_lo": 8.490144619604774,
+   "ci_hi": 13.691738646727732
+  },
+  "M4-enc-P1": {
+   "mean": 10.927969711860726,
+   "ci_lo": 8.493363292359202,
+   "ci_hi": 13.688708011368242
+  }
+ },
+ "contrasts": {
+  "M4-enc vs M2": {
+   "model": "M4-enc",
+   "comparator": "M2",
+   "n_patients": 19,
+   "mean_model": 10.929324856174242,
+   "mean_comp": 10.927969711860726,
+   "delta": 0.0013551443135160213,
+   "delta_lo": -0.004113168861302441,
+   "delta_hi": 0.006986260064387294,
+   "rr": -0.00012400696096781516,
+   "rr_lo": -0.0005696737393161456,
+   "rr_hi": 0.000431296412426718,
+   "meets_rule": false
+  },
+  "M4-enc vs M3": {
+   "model": "M4-enc",
+   "comparator": "M3",
+   "n_patients": 19,
+   "mean_model": 10.929324856174242,
+   "mean_comp": 10.929324856174242,
+   "delta": 0.0,
+   "delta_lo": 0.0,
+   "delta_hi": 0.0,
+   "rr": 0.0,
+   "rr_lo": 0.0,
+   "rr_hi": 0.0,
+   "meets_rule": false
+  },
+  "M4-enc vs M4": {
+   "model": "M4-enc",
+   "comparator": "M4",
+   "n_patients": 19,
+   "mean_model": 10.929324856174242,
+   "mean_comp": 10.926979642311018,
+   "delta": 0.0023452138632240604,
+   "delta_lo": -0.041876848728824224,
+   "delta_hi": 0.04134861302057108,
+   "rr": -0.0002146259936408601,
+   "rr_lo": -0.0039504848825937635,
+   "rr_hi": 0.0037839962709623693,
+   "meets_rule": false
+  },
+  "M4-enc-P1 vs M2": {
+   "model": "M4-enc-P1",
+   "comparator": "M2",
+   "n_patients": 19,
+   "mean_model": 10.927969711860726,
+   "mean_comp": 10.927969711860726,
+   "delta": 0.0,
+   "delta_lo": 0.0,
+   "delta_hi": 0.0,
+   "rr": 0.0,
+   "rr_lo": 0.0,
+   "rr_hi": 0.0,
+   "meets_rule": false
+  },
+  "M4-enc vs M4-enc-P1": {
+   "model": "M4-enc",
+   "comparator": "M4-enc-P1",
+   "n_patients": 19,
+   "mean_model": 10.929324856174242,
+   "mean_comp": 10.927969711860726,
+   "delta": 0.0013551443135160213,
+   "delta_lo": -0.004113168861302441,
+   "delta_hi": 0.006986260064387294,
+   "rr": -0.00012400696096781516,
+   "rr_lo": -0.0005696737393161456,
+   "rr_hi": 0.000431296412426718,
+   "meets_rule": false
+  },
+  "M4 vs M2": {
+   "model": "M4",
+   "comparator": "M2",
+   "n_patients": 19,
+   "mean_model": 10.926979642311018,
+   "mean_comp": 10.927969711860726,
+   "delta": -0.0009900695497080392,
+   "delta_lo": -0.042115938611609983,
+   "delta_hi": 0.04433376704008615,
+   "rr": 9.059958764645604e-05,
+   "rr_lo": -0.004085550883140193,
+   "rr_hi": 0.004029111270567754,
+   "meets_rule": false
+  }
+ },
+ "reference_contrast_note": "M4 vs M2 is the frozen-scoring primary contrast, recomputed from the stored forecasts; it equals the frozen-scoring summary (checked)",
+ "fast_cycling_row": "omitted (an S-dev restriction; see btc/models/encoder_sob.py)",
+ "m4_enc_vs_m4": {
+  "ci_excludes_zero": false
+ },
+ "refit": {
+  "penalties": {
+   "enc:real/M2": 1.0,
+   "enc:real/M3": 31.622776601683793,
+   "enc:real/M4-enc": "dropped",
+   "enc:p1/M2": 1.0,
+   "enc:p1/M3-P1": "dropped",
+   "enc:p1/M4-enc-P1": "dropped"
+  },
+  "encoder_block_dropped": {
+   "M4-enc": true,
+   "M4-enc-P1": true
+  },
+  "frozen_equality": {
+   "M2 (refit chain enc vs frozen chain main)": {
+    "penalty": [
+     1.0,
+     1.0
+    ],
+    "penalty_equal": true,
+    "equal": true,
+    "parts": {
+     "b0": true,
+     "beta": true,
+     "scaler_mean": true,
+     "scaler_sd": true,
+     "columns": true,
+     "imputation_medians": true,
+     "indicator_columns": true,
+     "requires": true
+    },
+    "max_abs_coefficient_diff": 0.0,
+    "intercept_diff": 0.0
+   },
+   "M3 (refit chain enc vs frozen chain main)": {
+    "penalty": [
+     31.622776601683793,
+     31.622776601683793
+    ],
+    "penalty_equal": true,
+    "equal": true,
+    "parts": {
+     "b0": true,
+     "beta": true,
+     "scaler_mean": true,
+     "scaler_sd": true,
+     "columns": true,
+     "imputation_medians": true,
+     "indicator_columns": true,
+     "requires": true
+    },
+    "max_abs_coefficient_diff": 0.0,
+    "intercept_diff": 0.0
+   },
+   "M2 (refit chain enc_p1 vs frozen chain p1)": {
+    "penalty": [
+     1.0,
+     1.0
+    ],
+    "penalty_equal": true,
+    "equal": true,
+    "parts": {
+     "b0": true,
+     "beta": true,
+     "scaler_mean": true,
+     "scaler_sd": true,
+     "columns": true,
+     "imputation_medians": true,
+     "indicator_columns": true,
+     "requires": true
+    },
+    "max_abs_coefficient_diff": 0.0,
+    "intercept_diff": 0.0
+   },
+   "M3-P1 (refit chain enc_p1 vs frozen chain p1)": {
+    "penalty": [
+     "dropped",
+     "dropped"
+    ],
+    "penalty_equal": true,
+    "equal": true,
+    "dropped": [
+     true,
+     true
+    ]
+   }
+  },
+  "stages_not_equal_to_frozen": []
+ },
+ "reproduction_of_frozen_forecasts": {
+  "M2 vs stored frozen forecasts": {
+   "max_abs_diff_mmHg": 0.0,
+   "bit_identical": true,
+   "close": true
+  },
+  "M3 vs stored frozen forecasts": {
+   "max_abs_diff_mmHg": 0.0,
+   "bit_identical": true,
+   "close": true
+  },
+  "M2 (P1 chain) vs stored frozen forecasts": {
+   "max_abs_diff_mmHg": 0.0,
+   "bit_identical": true,
+   "close": true
+  },
+  "M3-P1 vs stored frozen forecasts": {
+   "max_abs_diff_mmHg": 0.0,
+   "bit_identical": true,
+   "close": true
+  },
+  "M2 vs frozen model on this frame": {
+   "max_abs_diff_mmHg": 0.0,
+   "bit_identical": true,
+   "close": true
+  },
+  "M3 vs frozen model on this frame": {
+   "max_abs_diff_mmHg": 0.0,
+   "bit_identical": true,
+   "close": true
+  },
+  "M3-P1 vs frozen model on this frame": {
+   "max_abs_diff_mmHg": 0.0,
+   "bit_identical": true,
+   "close": true
+  }
+ },
+ "fallback": {
+  "n_forecasts": 0,
+  "max_abs_diff_mmHg": 0.0,
+  "bit_identical": true,
+  "close": true
+ },
+ "n_bootstrap_resamples": 2000,
+ "bootstrap_seed": 20261118,
+ "one_line_summary": "Exploratory, computed after the frozen scoring: in the 19 cesarean cases (a case series), the relative reduction of next-reading MAP forecast error by M4-enc against the cuff-only model was 0.0% (95% CI −0.1% to 0.0%).",
+ "n_cases_embedded": 20,
+ "n_windows_embedded": 7046,
+ "donors": [
+  123,
+  265,
+  307,
+  858,
+  921,
+  1780,
+  2468,
+  2846,
+  3970,
+  4215,
+  4343,
+  4468,
+  4952,
+  5306,
+  5445,
+  5530,
+  5660,
+  6115,
+  6187
+ ],
+ "same_windows_as_m4": {
+  "rows_compared": 568,
+  "rows_available": 567
+ },
+ "dom_freq_check": {
+  "tolerance_hz": 0.2,
+  "n": 7046,
+  "n_agree": 7019,
+  "share_agree": 0.9961680386034629
+ },
+ "departures": [
+  "S-dev embeddings were built twice: the first build's log recorded the torch settings of the parent process instead of the workers'; the record was fixed (commit a07e0d2) and the embeddings rebuilt before any blood-pressure model. Both builds gave byte-identical arrays (SHA-256 7e1c56b2...d812).",
+  "The S-ob code (this step) was written after the S-dev encoder result was known (ENCODER_PLAN.md §7 fixes what it does and says it runs whatever the S-dev result shows).",
+  "The fast-cycling row of ENCODER_PLAN.md §6 is omitted for S-ob (an S-dev restriction)."
+ ]
+}

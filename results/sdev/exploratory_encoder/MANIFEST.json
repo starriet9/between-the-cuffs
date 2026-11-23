@@ -1,0 +1,112 @@
+{
+ "meta": {
+  "commit": "d66ad631230a618a66f70b26e467b73c635840b4",
+  "describe": "models-frozen-8-gd66ad63",
+  "state": "clean",
+  "dirty": false,
+  "status": [],
+  "tags_at_head": [],
+  "data": "VitalDB derived tables (derived/sdev_*.parquet) and encoder tables (derived/sdev_enc_*)",
+  "stage": "exploratory encoder check (sdev, ENCODER_PLAN.md)",
+  "inputs_sha256": {
+   "sdev_cases.parquet": "b98f861e3a6bbefe7e958ae713332cd40dfaeb70eaeedb0e47f4f55535598e56",
+   "sdev_readings.parquet": "095d1b829680d6811d07bd700c7d896da3b701000a0654aa3493e87fc8edd857",
+   "sdev_instances.parquet": "c07533a28aa431a2a701cb9fe8b3072b829a8e8cdc67bae3d59d03c73247f4cf",
+   "sdev_features_hr.parquet": "088938443d45c2032d89127c18b518ffdc1f2ded4b703bbff52aaa32ae4d0990",
+   "sdev_features_wf.parquet": "ed9acd2260e93820ba90c19b08911952317c845e303c34e1f0f371c4136ba835"
+  },
+  "plan": {
+   "file": "ENCODER_PLAN.md",
+   "sha256": "5e1bc2c18362d9ad872321b8174c5aced5017fbe56dc4fcca973ad06501dc95f",
+   "last_commit": "29db44bb87fb766f190184003920b86486fa7d19"
+  },
+  "plan_public": {
+   "commit": "29db44bb87fb766f190184003920b86486fa7d19",
+   "branch": "origin/main",
+   "pushed_utc": "2026-11-23T03:54:36Z",
+   "source": "GitHub activity record of the repository"
+  },
+  "plan_unchanged_since_public_commit": true,
+  "weights": {
+   "file": "data/external/papagei/papagei_s.pt",
+   "size": 23339216,
+   "md5": "a4cdb32392e2a7b25999128af92813b5",
+   "sha256": "79d68671e51bdc951fee853e5a8241099e38148ff26ed888b843849332e0b988",
+   "zenodo_record": 13983110,
+   "doi": "10.5281/zenodo.13983110"
+  },
+  "model": {
+   "class": "ResNet1DMoE",
+   "kwargs": {
+    "in_channels": 1,
+    "base_filters": 32,
+    "kernel_size": 3,
+    "stride": 2,
+    "groups": 1,
+    "n_block": 18,
+    "n_classes": 512,
+    "n_experts": 3
+   },
+   "upstream_commit": "0c537dad4d2850e15b724260de820dd68d77f0b0",
+   "output_index": 0,
+   "windows_per_forward_pass": 1
+  },
+  "embedding_runtime": {
+   "mkldnn_available": true,
+   "numpy": "2.5.5",
+   "scipy": "1.18.1",
+   "torch": "2.15.0+cpu",
+   "torch_deterministic": true,
+   "torch_num_interop_threads": 1,
+   "torch_num_threads": 1,
+   "workers": 12,
+   "start_method": "spawn",
+   "recorded_in": "each worker, after configure_torch (all workers agree, checked)"
+  },
+  "preprocessing": {
+   "band_hz": [
+    0.5,
+    12.0
+   ],
+   "cheby2_order": 4,
+   "cheby2_rs_db": 20.0,
+   "smooth_samples": 25,
+   "z_eps": 1e-07,
+   "resample": [
+    1,
+    4
+   ],
+   "note": "Filter parameters as in pyPPG's preproc.py (Chebyshev II, order 4, 20 dB, 0.5-12 Hz, filtfilt; then a 50-ms moving average with filtfilt at fs >= 75 Hz), as ENCODER_PLAN.md \u00a72 states them. Here the band-pass runs as second-order sections (sosfiltfilt) on each 10-s window, with SciPy's default padding, so the edge padding may differ from pyPPG's filtfilt on (b, a) coefficients [unverified]."
+  },
+  "preprocessing_note": "Filter parameters as in pyPPG's preproc.py (Chebyshev II, order 4, 20 dB, 0.5-12 Hz, filtfilt; then a 50-ms moving average with filtfilt at fs >= 75 Hz), as ENCODER_PLAN.md \u00a72 states them. Here the band-pass runs as second-order sections (sosfiltfilt) on each 10-s window, with SciPy's default padding, so the edge padding may differ from pyPPG's filtfilt on (b, a) coefficients [unverified].",
+  "software": {
+   "python": "3.13.15",
+   "numpy": "2.5.5",
+   "pandas": "3.1.1",
+   "scikit-learn": "1.9.1",
+   "scipy": "1.18.1"
+  },
+  "embeddings_sha256": "7e1c56b27f3542644dbc2fb21c1d619af70db0cb62b348e0db39c7077e98d812",
+  "embeddings_built_at_commit": "a07e0d2bb684bd9a1621b5308ced37a6fbe64ada",
+  "encoder_features_sha256": "d6a9484a8218438acba1f443e85d395b382498c443b3f662f16b56b50d1cbc9e",
+  "encoder_features_built_at_commit": "a07e0d2bb684bd9a1621b5308ced37a6fbe64ada",
+  "confirmatory_predictions_sha256": "46f2f9eb45d66f919eec69825eb8b00dfe6155606b2a6a6a25a5fa5bed206505",
+  "confirmatory_summary_sha256": "fa87b9b8e9e7d4a12eb91b6859ebfa8b6690dc4f9059c68a0963d740a614f6b9",
+  "build_check": {
+   "r2_out_of_fold": 0.6871036699465954,
+   "passed": true,
+   "sha256": "ca90ce1e97d0cbd10e9b865ac94c63e159e376a361afb507e4a09920b44397e7"
+  }
+ },
+ "files": {
+  "build_check.json": "ca90ce1e97d0cbd10e9b865ac94c63e159e376a361afb507e4a09920b44397e7",
+  "contrasts.csv": "7e72be57b71fbc7684feb2df4d13b75cdaf556a60bb37a4fd1e7ac5b7448543f",
+  "dropped_blocks_outer_folds.csv": "ae86d9645bf7e86ff5b199a0cf62c386b00297457995523200c7b6646abfd5a5",
+  "model_summary.csv": "8c2460af5d1577444305a98bfefa689552c075c17dd9d56dcca0d836fc8f3c9f",
+  "penalties.csv": "bd150e992077cee78dc0ae26e66e666e60a88d0b37a38c9156824e0a02a070de",
+  "per_patient_primary.csv": "3bc0139a30e46fa20d8b4386d84789962cb6ef0e5b1c30cad077d3896ebee31f",
+  "predictions_primary.csv": "0379f57d36e7387a3b66964ada06e62659ca6951321b1c6f6fa24cd589c14ee4",
+  "summary.json": "7d7480404d087ada5af8b3b1046d60675921422701dcf39aa24449a7d22f5518",
+  "summary.md": "5b05b215a85cac8d7e0db094b19b8bb8e4fa3fc4e715fb3d834e1de93cf0a446"
+ }
+}

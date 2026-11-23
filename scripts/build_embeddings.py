@@ -59,6 +59,7 @@ def run_case(args) -> dict:
         raise ValueError(f"case {caseid}: usable windows but no pleth")
     res = E.embed_case(caseid, d["pleth"], win_case, lambda X: E.embed(_MODEL, X))
     res["seconds"] = round(time.time() - t1, 2)
+    res["runtime"] = E.runtime_info()              # this worker's settings (threads, deterministic algorithms)
     res["raw_file"] = f"data/raw/{COHORT}/{int(caseid)}.npz"
     return res
 
@@ -113,6 +114,10 @@ def main(argv=None) -> int:
     idx["row"] = np.arange(len(idx), dtype=np.int64)
     idx["dom_freq"] = np.concatenate([r["dom_freq"] for r in res])
     idx["processed_dom_freq"] = np.concatenate([r["processed_dom_freq"] for r in res])
+    rts = {json.dumps(r["runtime"], sort_keys=True) for r in res}
+    if len(rts) != 1:
+        raise RuntimeError(f"workers ran with different settings: {rts}")
+    worker_rt = json.loads(rts.pop())
     n_usable = int(win.loc[win["caseid"].isin(has), "usable"].sum())
     if len(idx) != n_usable or Emat.shape != (n_usable, E.EMB_DIM) or not np.all(np.isfinite(Emat)):
         raise RuntimeError("embedding count, shape or values unexpected")
@@ -127,8 +132,8 @@ def main(argv=None) -> int:
             "preprocessing": {"band_hz": list(E.BAND), "cheby2_order": E.CHEBY_ORDER, "cheby2_rs_db": E.CHEBY_RS_DB,
                               "smooth_samples": E.SMOOTH_N, "z_eps": E.Z_EPS, "resample": [E.RESAMPLE_UP, E.RESAMPLE_DOWN],
                               "note": E.FILTER_NOTE},
-            "runtime": {**E.runtime_info(), "workers": a.jobs, "start_method": "spawn" if a.jobs > 1 else "in-process",
-                        "per_worker": "torch.set_num_threads(1), set_num_interop_threads(1), deterministic algorithms"},
+            "runtime": {**worker_rt, "workers": a.jobs, "start_method": "spawn" if a.jobs > 1 else "in-process",
+                        "recorded_in": "each worker, after configure_torch (all workers agree, checked)"},
             "inputs": {"windows": rel(win_path), "windows_sha256": hashlib.sha256(win_path.read_bytes()).hexdigest(),
                        "windows_commit": provenance.read_meta(win_path).get("git", {}).get("commit")},
             "n_cases": len(res), "n_windows_embedded": int(len(idx)), "embeddings_sha256": arr_sha,

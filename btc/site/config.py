@@ -20,6 +20,7 @@ class SiteConfig:
     page_url: str = "{{PAGE_URL}}"
     branch: str = "main"
     registered_date: str = "2026-11-21"              # SPEC/PREREG v1.5 commit
+    registered_public_date: str = "2026-11-22"       # GitHub release prereg-v1.5 (server time)
     registration_commit: str = "59939b7"
     frozen_date: str = "{{FROZEN_DATE}}"             # SPEC §9 step 6
     frozen_tag: str = "{{FROZEN_TAG}}"
@@ -34,6 +35,13 @@ class SiteConfig:
     extra: dict = field(default_factory=dict)
 
     # public links ------------------------------------------------------------
+    @property
+    def contact_url(self) -> str:
+        c = self.contact
+        if c.startswith(("http://", "https://")):
+            return c
+        return f"mailto:{c}" if "@" in c else f"https://{c}"
+
     def blob(self, path: str) -> str:
         return f"{self.repo_url}/blob/{self.branch}/{path}"
 

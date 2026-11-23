@@ -389,6 +389,9 @@ def test_fill_site_config(tmp_path, monkeypatch):
     monkeypatch.setenv("GIT_COMMITTER_DATE", "2026-12-02T09:00:00+09:00")
     _git(repo, "commit", "-q", "-m", "scored")
     cfg = json.loads((ROOT / "btc/site/site.json").read_text())
+    # start from the unfilled template, whatever the live settings hold
+    cfg.update(author_name="{{AUTHOR_NAME}}", contact="{{CONTACT}}", checksums_path="{{CHECKSUMS_PATH}}",
+               reproduce_command="{{REPRODUCE_COMMAND}}")
     new, notes = fs.fill(repo, cfg, reproduce_command="python scripts/x.py", last_updated="2026-12-04")
     assert new["registration_commit"] == reg and new["registered_date"] == "2026-11-20"
     assert (new["frozen_tag"], new["frozen_date"]) == ("models-frozen", "2026-12-01")

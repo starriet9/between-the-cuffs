@@ -42,6 +42,7 @@ MEANING_NULL = ("A null is harder to attribute to the drug proxy, but opposite h
                 "model; the gradient-boosting check in `REPORT.md` asks the same question without the linear form.")
 MEANING_NO_CLAIM = "The placebo control failed, so no claim is made about the added signals."
 EITHER_WAY = "Either way, only data with time-stamped vasopressor doses can settle the question."
+MEANING_HEADING = "What this means (written before the result)"
 
 # Block 3: the same proposal for either outcome (SPEC §8.1); a draft for the author
 NEXT_EXPERIMENT = (
@@ -134,7 +135,7 @@ def registration_nodes(site) -> list:
     c = site.config
     nodes = [
         [Seg("link", "Pre-registered", "prereg"), t(" on "), Seg("date", c.registered_date),
-         t(", before any model was fitted")],
+         t(f" (public release {c.registered_public_date}), before any model was fitted")],
         [t("models frozen "), Seg("date", c.frozen_date, "frozen")],
         [t("cesarean cases scored once on "), Seg("date", c.scored_date, "scored")],
     ]
@@ -155,6 +156,7 @@ def links_line(site) -> list:
     if c.pdf_url:
         items.append([Seg("link", "One-page PDF", "pdf")])
     items.append([Seg("link", "Full report", "report")])
+    items.append([Seg("link", "How to read these numbers", "reading")])
     items.append([t("Reproduce: "), Seg("code", c.reproduce_command)])
     out = []
     for i, it in enumerate(items):
@@ -181,7 +183,6 @@ def block1(site) -> Block:
         Unit("registration", reg, {"nodes": nodes, "chips": chips}),
         Unit("figure", [], {"alt": SUMMARY_ALT.format(cid=rule1), "img": "img/summary.png"}),
         Unit("links", links_line(site)),
-        Unit("result_label", [Seg("b", "Result in full.")]),
         Unit("sentence", [t(h.sentence_1)]),
         Unit("sentence", [t(h.sentence_2)]),
         Unit("sentence", [t(h.sentence_3)]),
@@ -205,11 +206,11 @@ def fmt_ci_mm(v: tuple) -> str:
 
 def table_rows(site) -> tuple:
     h = site.headline
-    head = ["Model", "Inputs",
+    head = ["Model",
             f"Non-cesarean, N = {h.N}: mean RMSE (95% CI), mmHg",
             f"Cesarean, n = {h.n}: mean RMSE (95% CI), mmHg"]
-    rows = [[r.model, r.description, fmt_ci_mm(r.sdev), fmt_ci_mm(r.sob)] for r in site.table]
-    rows.append(["Waveform coverage", "share of forecasts with waveform features",
+    rows = [[f"{r.model} · {r.description}", fmt_ci_mm(r.sdev), fmt_ci_mm(r.sob)] for r in site.table]
+    rows.append(["Waveform coverage · share of forecasts with waveform features",
                  f"{pct(site.coverage['S-dev'])}%", f"{pct(site.coverage['S-ob'])}%"])
     return head, rows
 
@@ -220,7 +221,7 @@ def blocks(site) -> list:
     meaning = [Unit("p", code_split(p)) for p in meaning_paragraphs(h.row)]
     if h.gb_line:
         meaning.append(Unit("p", code_split(h.gb_line)))
-    b.append(Block(2, "meaning", "What this means", meaning))
+    b.append(Block(2, "meaning", MEANING_HEADING, meaning))
     b.append(Block(3, "next", "Next experiment", [Unit("p", [t(NEXT_EXPERIMENT)])]))
     rule1 = site.featured.get(1)
     b.append(Block(4, "replay", "Replay", [
@@ -250,7 +251,8 @@ def blocks(site) -> list:
                    Seg("link", "doi:10.1038/s41597-022-01411-5", "doi"),
                    t(". No VitalDB data are redistributed here; the code downloads them from the public API "
                      "at run time.")]),
-        Unit("p", [t(NOT_ADVICE)]),
+        Unit("p", [t("Design, analysis and code: "), t(site.config.author_name), t(" ("),
+                   Seg("link", site.config.contact, "contact"), t(").")]),
     ]))
     return b
 

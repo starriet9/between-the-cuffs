@@ -60,6 +60,7 @@ h3 { font-size: 18px; line-height: 24px; }
 .registration { display: flex; flex-wrap: wrap; align-items: center; row-gap: 8px; font-size: 14px; line-height: 22px;
   font-variant-numeric: tabular-nums; color: var(--ink); margin: 0 0 18px; max-width: none; }
 .registration .node { display: inline-flex; align-items: center; }
+.registration .node-text { display: inline; min-width: 0; }
 .registration .node::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ink);
   margin-right: 8px; flex: none; }
 .registration .sep { font-size: 0; color: transparent; flex: 0 0 28px; height: 1px; background: var(--rule);
@@ -146,7 +147,10 @@ h3 { font-size: 18px; line-height: 24px; }
 table { border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; min-width: 640px; width: 100%; }
 th, td { text-align: left; padding: 8px 12px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
 thead th { font-weight: 600; font-size: 14px; color: var(--ink-2); background: var(--bg-soft); padding-left: 6px; }
-tbody th { font-weight: 600; font-family: var(--mono); font-size: 14px; white-space: nowrap; padding-left: 6px; }
+tbody th { font-weight: 400; font-size: 14px; padding-left: 6px; text-align: left; }
+tbody th .m { font-weight: 600; font-family: var(--mono); white-space: nowrap; }
+tbody th .sep-dot { font-size: 0; }
+tbody th .desc { display: block; font-family: var(--sans); font-size: 13px; line-height: 18px; color: var(--ink-2); }
 .num { text-align: right; white-space: nowrap; }
 figure.wide { margin: 8px 0 8px; }
 

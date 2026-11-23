@@ -15,7 +15,8 @@ def md_escape(s: str) -> str:
 
 def link_targets(site) -> dict:
     c = site.config
-    return {"prereg": "PREREG.md", "report": "REPORT.md", "frozen": c.frozen_url, "scored": c.scored_url,
+    return {"prereg": "PREREG.md", "report": "REPORT.md", "reading": "REPORT.md#how-to-read-these-numbers",
+            "contact": c.contact_url, "frozen": c.frozen_url, "scored": c.scored_url,
             "vitaldb": T.VITALDB_URL, "replay": "#replay", "cases": c.page_url.rstrip("/") + "/#cases",
             "narrated": c.narrated_replay_url, "pdf": c.pdf_url, "licence": T.LICENCE_URL,
             "doi": T.VITALDB_DOI_URL}
@@ -49,7 +50,7 @@ def unit_md(u, links: dict, asset_prefix: str) -> str:
     if u.role == "table":
         head, rows = u.extra["head"], u.extra["rows"]
         lines = ["| " + " | ".join(md_escape(x) for x in head) + " |",
-                 "|" + "|".join(["---", "---"] + ["---:"] * (len(head) - 2)) + "|"]
+                 "|" + "|".join(["---"] + ["---:"] * (len(head) - 1)) + "|"]
         lines += ["| " + " | ".join(md_escape(x) for x in r) + " |" for r in rows]
         return "\n".join(lines)
     if u.role == "list":
@@ -67,7 +68,4 @@ def render_readme(site, asset_prefix: str = "docs/assets/") -> str:
             parts.append(f"## {b.heading}")
         for u in b.units:
             parts.append(unit_md(u, links, asset_prefix))
-    c = site.config
-    parts.append("---")
-    parts.append(f"{md_escape(c.author_name)} · {md_escape(c.contact)}")
     return "\n\n".join(parts) + "\n"

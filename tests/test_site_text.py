@@ -7,7 +7,7 @@ import pytest
 from btc.models import headline as H
 from btc.site import checks, fixtures as FX, text as T
 from btc.site.page import render_page
-from btc.site.readme import render_readme
+from btc.site.readme import md_escape, render_readme
 from btc.site.results import README_MODELS, consistency_problems
 from btc.site.series import NMB_REASON, CaseSummary
 
@@ -103,15 +103,19 @@ def test_emphasis(rendered):
         assert answer_md.count("**") == 2          # the README bolds only the label
 
 
+def md_escape_s1(site):
+    return md_escape(site.headline.sentence_1)
+
+
 def test_readme_block_order_and_page_order(rendered):
     site, md, html = rendered["row6-hr"]
     heads = re.findall(r"(?m)^## (.+)$", md)
-    assert heads == ["What this means", "Next experiment", "Replay", "Error by model", "What this does not show",
+    assert heads == [T.MEANING_HEADING, "Next experiment", "Replay", "Error by model", "What this does not show",
                      "Author's note", "Credit"]
     order = re.findall(r'data-block="(\d)"', html)
     assert order == ["1", "2", "3", "4", "5", "6", "7", "8"]
     assert html.index('id="cases"') < html.index('id="models"') and html.index('id="check"') < html.index('id="credit"')
-    assert md.index("![Left: one cesarean case") < md.index("**Result in full.**")
+    assert md.index("![Left: one cesarean case") < md.index(md_escape_s1(site))
 
 
 def test_credit_on_both(rendered):

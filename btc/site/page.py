@@ -28,7 +28,9 @@ def e(s) -> str:
 
 def link_targets(site) -> dict:
     c = site.config
-    return {"prereg": c.blob("PREREG.md"), "report": c.blob("REPORT.md"), "frozen": c.frozen_url,
+    return {"prereg": c.blob("PREREG.md"), "report": c.blob("REPORT.md"),
+            "reading": c.blob("REPORT.md") + "#how-to-read-these-numbers", "contact": c.contact_url,
+            "frozen": c.frozen_url,
             "scored": c.scored_url, "vitaldb": T.VITALDB_URL, "replay": "#replay", "cases": "#cases",
             "narrated": c.narrated_replay_url, "pdf": c.pdf_url, "licence": T.LICENCE_URL, "doi": T.VITALDB_DOI_URL}
 
@@ -86,7 +88,7 @@ def block1_html(b, site, links, assets) -> str:
         if i:
             parts.append('<span class="sep"> · </span>')
         dev = " node-dev" if i == 3 else ""
-        parts.append(f'<span class="node{dev}">{segs_html(nd, links)}</span>')
+        parts.append(f'<span class="node{dev}"><span class="node-text">{segs_html(nd, links)}</span></span>')
     chip_html = "".join(('<span class="sep sep-gap"> · </span>' if j else "")
                         + f'<span class="chip">{segs_html(ch, links)}</span>' for j, ch in enumerate(chips))
     parts.append(f'<span class="sep sep-gap"> · </span><span class="chips">{chip_html}</span>')
@@ -111,7 +113,6 @@ def block1_html(b, site, links, assets) -> str:
 <figure class="summary">{picture}</figure>
 <p class="links">{links_line}</p>
 <div class="result-full">
-<p class="result-label">{segs_html(u["result_label"].segs, links)}</p>
 {"".join(f"<p>{segs_html(x.segs, links)}</p>" for x in sentences)}
 </div>
 </section>"""
@@ -128,11 +129,13 @@ def unit_html(x, links) -> str:
         return "<ul>" + "".join(f"<li>{segs_html(it, links)}</li>" for it in x.extra["items"]) + "</ul>"
     if x.role == "table":
         head, rows = x.extra["head"], x.extra["rows"]
-        th = "".join(f'<th scope="col"{" class=num" if j >= 2 else ""}>{e(h)}</th>' for j, h in enumerate(head))
+        th = "".join(f'<th scope="col"{" class=num" if j >= 1 else ""}>{e(h)}</th>' for j, h in enumerate(head))
         body = []
         for r in rows:
-            cells = [f'<th scope="row">{e(r[0])}</th>', f"<td>{e(r[1])}</td>"]
-            cells += [f'<td class="num">{e(v)}</td>' for v in r[2:]]
+            code, _, desc = r[0].partition(" · ")
+            label = f'<span class="m">{e(code)}</span>' + (f'<span class="sep-dot"> · </span><span class="desc">{e(desc)}</span>' if desc else "")
+            cells = [f'<th scope="row">{label}</th>']
+            cells += [f'<td class="num">{e(v)}</td>' for v in r[1:]]
             body.append("<tr>" + "".join(cells) + "</tr>")
         return (f'<div class="table-wrap" role="region" aria-label="Error by model" tabindex="0"><table>'
                 f"<thead><tr>{th}</tr></thead><tbody>{''.join(body)}</tbody></table></div>")
@@ -273,7 +276,6 @@ def render_page(site, assets: dict, css_href: str, js_href: str) -> str:
             plain_block_html(bl[6], links, assets) + "</section>",
             check_html(site)]
     footer = (plain_block_html(bl[7], links, assets, "site-footer")
-              + f'<p class="author" data-noparity>{e(c.author_name)} · {e(c.contact)}</p>'
               + f'<p class="updated" data-noparity>Last updated {e(c.last_updated)}</p></footer>')
     return f"""<!doctype html>
 <html lang="en">

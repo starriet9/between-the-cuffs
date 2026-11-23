@@ -1,0 +1,341 @@
+{
+ "meta": {
+  "commit": "d66ad631230a618a66f70b26e467b73c635840b4",
+  "describe": "models-frozen-8-gd66ad63",
+  "state": "clean",
+  "dirty": false,
+  "status": [],
+  "tags_at_head": [],
+  "data": "VitalDB derived tables (derived/sdev_*.parquet) and encoder tables (derived/sdev_enc_*)",
+  "stage": "exploratory encoder check (sdev, ENCODER_PLAN.md)",
+  "inputs_sha256": {
+   "sdev_cases.parquet": "b98f861e3a6bbefe7e958ae713332cd40dfaeb70eaeedb0e47f4f55535598e56",
+   "sdev_readings.parquet": "095d1b829680d6811d07bd700c7d896da3b701000a0654aa3493e87fc8edd857",
+   "sdev_instances.parquet": "c07533a28aa431a2a701cb9fe8b3072b829a8e8cdc67bae3d59d03c73247f4cf",
+   "sdev_features_hr.parquet": "088938443d45c2032d89127c18b518ffdc1f2ded4b703bbff52aaa32ae4d0990",
+   "sdev_features_wf.parquet": "ed9acd2260e93820ba90c19b08911952317c845e303c34e1f0f371c4136ba835"
+  },
+  "plan": {
+   "file": "ENCODER_PLAN.md",
+   "sha256": "5e1bc2c18362d9ad872321b8174c5aced5017fbe56dc4fcca973ad06501dc95f",
+   "last_commit": "29db44bb87fb766f190184003920b86486fa7d19"
+  },
+  "plan_public": {
+   "commit": "29db44bb87fb766f190184003920b86486fa7d19",
+   "branch": "origin/main",
+   "pushed_utc": "2026-11-23T03:54:36Z",
+   "source": "GitHub activity record of the repository"
+  },
+  "plan_unchanged_since_public_commit": true,
+  "weights": {
+   "file": "data/external/papagei/papagei_s.pt",
+   "size": 23339216,
+   "md5": "a4cdb32392e2a7b25999128af92813b5",
+   "sha256": "79d68671e51bdc951fee853e5a8241099e38148ff26ed888b843849332e0b988",
+   "zenodo_record": 13983110,
+   "doi": "10.5281/zenodo.13983110"
+  },
+  "model": {
+   "class": "ResNet1DMoE",
+   "kwargs": {
+    "in_channels": 1,
+    "base_filters": 32,
+    "kernel_size": 3,
+    "stride": 2,
+    "groups": 1,
+    "n_block": 18,
+    "n_classes": 512,
+    "n_experts": 3
+   },
+   "upstream_commit": "0c537dad4d2850e15b724260de820dd68d77f0b0",
+   "output_index": 0,
+   "windows_per_forward_pass": 1
+  },
+  "embedding_runtime": {
+   "mkldnn_available": true,
+   "numpy": "2.5.5",
+   "scipy": "1.18.1",
+   "torch": "2.15.0+cpu",
+   "torch_deterministic": true,
+   "torch_num_interop_threads": 1,
+   "torch_num_threads": 1,
+   "workers": 12,
+   "start_method": "spawn",
+   "recorded_in": "each worker, after configure_torch (all workers agree, checked)"
+  },
+  "preprocessing": {
+   "band_hz": [
+    0.5,
+    12.0
+   ],
+   "cheby2_order": 4,
+   "cheby2_rs_db": 20.0,
+   "smooth_samples": 25,
+   "z_eps": 1e-07,
+   "resample": [
+    1,
+    4
+   ],
+   "note": "Filter parameters as in pyPPG's preproc.py (Chebyshev II, order 4, 20 dB, 0.5-12 Hz, filtfilt; then a 50-ms moving average with filtfilt at fs >= 75 Hz), as ENCODER_PLAN.md §2 states them. Here the band-pass runs as second-order sections (sosfiltfilt) on each 10-s window, with SciPy's default padding, so the edge padding may differ from pyPPG's filtfilt on (b, a) coefficients [unverified]."
+  },
+  "preprocessing_note": "Filter parameters as in pyPPG's preproc.py (Chebyshev II, order 4, 20 dB, 0.5-12 Hz, filtfilt; then a 50-ms moving average with filtfilt at fs >= 75 Hz), as ENCODER_PLAN.md §2 states them. Here the band-pass runs as second-order sections (sosfiltfilt) on each 10-s window, with SciPy's default padding, so the edge padding may differ from pyPPG's filtfilt on (b, a) coefficients [unverified].",
+  "software": {
+   "python": "3.13.15",
+   "numpy": "2.5.5",
+   "pandas": "3.1.1",
+   "scikit-learn": "1.9.1",
+   "scipy": "1.18.1"
+  },
+  "embeddings_sha256": "7e1c56b27f3542644dbc2fb21c1d619af70db0cb62b348e0db39c7077e98d812",
+  "embeddings_built_at_commit": "a07e0d2bb684bd9a1621b5308ced37a6fbe64ada",
+  "encoder_features_sha256": "d6a9484a8218438acba1f443e85d395b382498c443b3f662f16b56b50d1cbc9e",
+  "encoder_features_built_at_commit": "a07e0d2bb684bd9a1621b5308ced37a6fbe64ada",
+  "confirmatory_predictions_sha256": "46f2f9eb45d66f919eec69825eb8b00dfe6155606b2a6a6a25a5fa5bed206505",
+  "confirmatory_summary_sha256": "fa87b9b8e9e7d4a12eb91b6859ebfa8b6690dc4f9059c68a0963d740a614f6b9",
+  "build_check": {
+   "r2_out_of_fold": 0.6871036699465954,
+   "passed": true,
+   "sha256": "ca90ce1e97d0cbd10e9b865ac94c63e159e376a361afb507e4a09920b44397e7"
+  }
+ },
+ "stage": "exploratory encoder check, S-dev outer cross-validation (ENCODER_PLAN.md §6)",
+ "label": "exploratory (ENCODER_PLAN.md); changes no registered outcome, rule or sentence",
+ "m2_structure": {
+  "form": "a",
+  "structure": "pooled"
+ },
+ "N": 200,
+ "n_forecasts": 1416,
+ "n_forecasts_all": 1421,
+ "n_forecasts_encoder_available": 1386,
+ "n_forecasts_encoder_available_p1": 1401,
+ "encoder_coverage": 0.9753694581280788,
+ "n_analysable_cases": 214,
+ "n_nmb_recorded_cases": 11,
+ "n_analysed_cases": 203,
+ "nmb_recorded_caseids": [
+  1023,
+  1877,
+  2191,
+  3017,
+  3071,
+  3217,
+  3495,
+  3772,
+  4833,
+  5276,
+  5930
+ ],
+ "include_nmb": false,
+ "rmse_patient_mean": {
+  "M2": {
+   "mean": 8.672159372827439,
+   "ci_lo": 7.94937464613527,
+   "ci_hi": 9.441352506811793
+  },
+  "M3": {
+   "mean": 8.680316284582384,
+   "ci_lo": 7.958538292281161,
+   "ci_hi": 9.442497121536247
+  },
+  "M4": {
+   "mean": 8.681267162492926,
+   "ci_lo": 7.965465887519554,
+   "ci_hi": 9.443571393508305
+  },
+  "M4-P1": {
+   "mean": 8.674523061518544,
+   "ci_lo": 7.951368387979528,
+   "ci_hi": 9.439984867385471
+  },
+  "M4-enc": {
+   "mean": 8.684711102550798,
+   "ci_lo": 7.964053011657246,
+   "ci_hi": 9.448045064167284
+  },
+  "M4-enc-P1": {
+   "mean": 8.674570785466106,
+   "ci_lo": 7.9511085646858035,
+   "ci_hi": 9.440727034734625
+  }
+ },
+ "contrasts": {
+  "M4-enc vs M2": {
+   "model": "M4-enc",
+   "comparator": "M2",
+   "n_patients": 200,
+   "mean_model": 8.684711102550798,
+   "mean_comp": 8.672159372827439,
+   "delta": 0.012551729723359273,
+   "delta_lo": -0.002100822718415074,
+   "delta_hi": 0.028677130057679887,
+   "rr": -0.0014473592082138165,
+   "rr_lo": -0.003301427922997846,
+   "rr_hi": 0.00024425180696211536,
+   "meets_rule": false
+  },
+  "M4-enc vs M3": {
+   "model": "M4-enc",
+   "comparator": "M3",
+   "n_patients": 200,
+   "mean_model": 8.684711102550798,
+   "mean_comp": 8.680316284582384,
+   "delta": 0.004394817968414344,
+   "delta_lo": 0.0009247285647667081,
+   "delta_hi": 0.008328143366642402,
+   "rr": -0.0005062969855396116,
+   "rr_lo": -0.0009730134044085458,
+   "rr_hi": -0.00010139152262809151,
+   "meets_rule": false
+  },
+  "M4-enc vs M4": {
+   "model": "M4-enc",
+   "comparator": "M4",
+   "n_patients": 200,
+   "mean_model": 8.684711102550798,
+   "mean_comp": 8.681267162492926,
+   "delta": 0.0034439400578722967,
+   "delta_lo": -0.015245504951248722,
+   "delta_hi": 0.02244287311698686,
+   "rr": -0.0003967093735752769,
+   "rr_lo": -0.002607511816174235,
+   "rr_hi": 0.001801427092765286,
+   "meets_rule": false
+  },
+  "M4-enc-P1 vs M2": {
+   "model": "M4-enc-P1",
+   "comparator": "M2",
+   "n_patients": 200,
+   "mean_model": 8.674570785466106,
+   "mean_comp": 8.672159372827439,
+   "delta": 0.0024114126386667323,
+   "delta_lo": -0.002215450953584952,
+   "delta_hi": 0.007069194848029968,
+   "rr": -0.00027806369036786904,
+   "rr_lo": -0.0008333833417841829,
+   "rr_hi": 0.0002544598543071483,
+   "meets_rule": false
+  },
+  "M4-enc vs M4-enc-P1": {
+   "model": "M4-enc",
+   "comparator": "M4-enc-P1",
+   "n_patients": 200,
+   "mean_model": 8.684711102550798,
+   "mean_comp": 8.674570785466106,
+   "delta": 0.01014031708469254,
+   "delta_lo": -0.006070885710730956,
+   "delta_hi": 0.027387663179288098,
+   "rr": -0.001168970469603181,
+   "rr_lo": -0.0031756953894327257,
+   "rr_hi": 0.0007001625551954852,
+   "meets_rule": false
+  },
+  "M4 vs M2": {
+   "model": "M4",
+   "comparator": "M2",
+   "n_patients": 200,
+   "mean_model": 8.681267162492926,
+   "mean_comp": 8.672159372827439,
+   "delta": 0.009107789665486976,
+   "delta_lo": -0.014168416906300062,
+   "delta_hi": 0.03267787540495337,
+   "rr": -0.001050233197284589,
+   "rr_lo": -0.003796842653709126,
+   "rr_hi": 0.0016251542916560654,
+   "meets_rule": false
+  }
+ },
+ "reference_contrast_note": "M4 vs M2 is the confirmatory primary contrast, recomputed from the stored forecasts; it equals the confirmatory summary (checked)",
+ "fast_cycling": {
+  "K": 30,
+  "M4-enc vs M2": {
+   "model": "M4-enc",
+   "comparator": "M2",
+   "n_patients": 30,
+   "mean_model": 8.957757223022542,
+   "mean_comp": 8.964457465902505,
+   "delta": -0.006700242879963625,
+   "delta_lo": -0.0241868711790862,
+   "delta_hi": 0.013537678473928049,
+   "rr": 0.0007474231324593461,
+   "rr_lo": -0.0016176989428294097,
+   "rr_hi": 0.002672399715479081,
+   "meets_rule": false
+  }
+ },
+ "m4_enc_vs_m2_meets_rule": false,
+ "placebo_validity_if_rule_met": null,
+ "meets_rule_with_placebo": false,
+ "m4_enc_vs_m4": {
+  "ci_excludes_zero": false,
+  "direction_if_excluded": null
+ },
+ "encoder_block_outer_folds": {
+  "M4-enc": {
+   "penalty_per_outer_fold": [
+    "dropped",
+    1000.0,
+    "dropped",
+    "dropped",
+    "dropped"
+   ],
+   "n_folds_dropped": 4,
+   "n_folds": 5
+  },
+  "M4-enc-P1": {
+   "penalty_per_outer_fold": [
+    "dropped",
+    "dropped",
+    "dropped",
+    "dropped",
+    "dropped"
+   ],
+   "n_folds_dropped": 5,
+   "n_folds": 5
+  },
+  "dropped_in_every_fold": false
+ },
+ "reproduction_of_confirmatory_stages": {
+  "M2 (enc chain)": {
+   "max_abs_diff_mmHg": 0.0,
+   "bit_identical": true,
+   "close": true
+  },
+  "M3": {
+   "max_abs_diff_mmHg": 0.0,
+   "bit_identical": true,
+   "close": true
+  },
+  "M2 (enc-P1 chain)": {
+   "max_abs_diff_mmHg": 0.0,
+   "bit_identical": true,
+   "close": true
+  },
+  "M3-P1": {
+   "max_abs_diff_mmHg": 0.0,
+   "bit_identical": true,
+   "close": true
+  }
+ },
+ "fallback": {
+  "n_forecasts": 35,
+  "max_abs_diff_from_M4_mmHg": 0.0,
+  "bit_identical_to_M4": true
+ },
+ "n_bootstrap_resamples": 2000,
+ "bootstrap_seed": 20261118,
+ "one_line_summary": "An exploratory check replaced the hand-crafted pleth features with embeddings from a frozen pretrained PPG encoder (PaPaGei-S) in the same model. It did not meet the rule either: −0.1% against the cuff-only model (95% CI −0.3% to 0.0%).",
+ "same_windows_as_m4": {
+  "rows_compared": 3104,
+  "rows_available": 3049
+ },
+ "n_windows_embedded": 75557,
+ "n_cases_embedded": 250,
+ "build_check": {
+  "r2_out_of_fold": 0.6871036699465954,
+  "passed": true,
+  "threshold": 0.5,
+  "n_windows": 61341,
+  "n_cases": 203
+ }
+}

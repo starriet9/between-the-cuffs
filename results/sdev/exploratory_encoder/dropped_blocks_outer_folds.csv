@@ -1,0 +1,6 @@
+# {"commit": "d66ad631230a618a66f70b26e467b73c635840b4", "describe": "models-frozen-8-gd66ad63", "data": "VitalDB derived tables (derived/sdev_*.parquet) and encoder tables (derived/sdev_enc_*)", "stage": "exploratory encoder check (sdev, ENCODER_PLAN.md)"}  (read with skiprows=1)
+chain,node,model,n_folds_dropped,n_folds
+enc:real,pooled,M3,0,5
+enc:real,pooled,M4-enc,4,5
+enc:p1,pooled,M3-P1,4,5
+enc:p1,pooled,M4-enc-P1,5,5

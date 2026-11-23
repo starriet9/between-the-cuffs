@@ -1,7 +1,7 @@
-"""Checks run on every build and enforced by the publish build (landing design §6.2).
+"""Checks run on every build. If any fails, the publish build stops and leaves docs/ and the README as they were.
 
 - placeholders: `{{`, `[X]`-style tokens, NaN/None/inf leaks, TODO/TBD, NNNN, lorem;
-- forbidden strings: absolute paths, file URLs, AI statements, plus the git-ignored private patterns;
+- forbidden strings: absolute paths and file URLs, plus the git-ignored private patterns;
 - phenylephrine (µg) and ephedrine (mg) never in one text run, and no summed vasopressor;
 - parity: the page's top block equals README block 1 word for word (and blocks 2, 3, 5-8);
 - no external request from the page (only links), no fetch(); page weight before case images.
@@ -26,9 +26,8 @@ PLACEHOLDERS = [
 FORBIDDEN = [
     (r"/(?:home|Users|root)/|(?<![\w.])/(?:tmp|mnt)/|\b[A-Za-z]:\\+[A-Za-z]", "absolute path"),
     (r"file://", "file URL"),
-    (r"(?i)\bAI[- ]assisted\b|\bAI[- ]generated\b|\bwith (the help of )?AI\b", "AI statement"),
 ]
-# Context-specific words (names, folders, tools) live in a git-ignored file, so that the public code does
+# Context-specific words (names and folders) live in a git-ignored file, so that the public code does
 # not carry them; every build and the tests load it when it is present.
 PRIVATE_PATTERNS = Path(__file__).resolve().parents[2] / "private" / "site_leak_patterns.txt"
 

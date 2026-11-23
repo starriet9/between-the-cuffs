@@ -467,6 +467,7 @@ def only_main(repo):
 # ---------------------------------------------------------------------------------------- end to end
 def test_full_run_is_identical_and_leaves_the_repository_unchanged(fake_repo, monkeypatch, capsys):
     repo = fake_repo["repo"]
+    monkeypatch.setattr(R, "torch_available", lambda: True)   # stand-in scripts; no torch needed
     monkeypatch.setenv("BTC_FROZEN_SCORING", "1")      # must not reach the S-dev and freeze steps
     before = git(repo, "status", "--porcelain", "--ignored")
     assert run(repo) == 0                               # default workdir: build/reproduce, ignored by git
@@ -710,8 +711,9 @@ def test_nested_output_folders(tmp_path):
     assert not [p for p in run.out.rglob("*") if p.is_file()]
 
 
-def test_missing_inputs_add_the_stages_that_write_them(fake_repo, tmp_path):
+def test_missing_inputs_add_the_stages_that_write_them(fake_repo, tmp_path, monkeypatch):
     repo, work = fake_repo["repo"], tmp_path / "w"
+    monkeypatch.setattr(R, "torch_available", lambda: True)   # stand-in scripts; no torch needed
     assert run(repo, "--stages", "encoder-sob", "--workdir", str(work)) == 0
     rep = report(work)
     assert set(rep["stages_added"]) == {"sdev", "sob", "encoder"}               # freeze is not needed

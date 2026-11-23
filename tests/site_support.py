@@ -15,7 +15,8 @@ def cases_and_series():
 def site_for(variant: str, tmp: Path, **config):
     cases, series = cases_and_series()
     paths = FX.write_results_tree(Path(tmp) / variant, variant, cases, series)
-    return load_site_data(paths["results"], paths["cases"], FX.config_for(variant, **config), variant=variant)
+    return load_site_data(paths["results"], paths["cases"], FX.config_for(variant, **config), variant=variant,
+                          sdev_cases=paths["sdev_cases"])
 
 
 def fake_assets(site) -> dict:

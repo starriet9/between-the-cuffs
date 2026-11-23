@@ -1,4 +1,4 @@
-"""Static page `index.html` (SPEC §8.3; landing design §2, §4).
+"""Static page `index.html` (SPEC §8.3).
 
 Generated at build time with every number already in the HTML: no fetch(), it opens from file://
 and works without JavaScript (every case is then a plain figure in a long list; the script only turns
@@ -231,7 +231,7 @@ def case_article(site, c, assets, rules) -> str:
     return (f'<article class="case" id="case-{c.caseid}" data-case="{c.caseid}" aria-label="VitalDB case {c.caseid}">'
             f'<header class="case-head">{head}{mode}</header><div class="case-body">'
             f'<figure class="case-fig">{still}{replay}</figure>'
-            f'<div class="case-side"><dl class="facts">{rows}</dl><p class="facts-note">{e(T.VASO_NOTE)}</p></div>'
+            f'<div class="case-side"><dl class="facts">{rows}</dl><p class="facts-note">{e(T.vaso_note(c.caseid))}</p></div>'
             f'</div></article>')
 
 

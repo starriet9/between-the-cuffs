@@ -152,8 +152,6 @@ FMT_NAN = {1: np.nan, 2: np.nan, 3: -128, 4: 255, 5: -32768, 6: 65535,
 FMT_DTYPE = {1: "<f4", 2: "<f8", 3: "<i1", 4: "<u1", 5: "<i2", 6: "<u2",
              7: "<i4", 8: "<u4"}
 
-CHROME_UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-             "(KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36")
 REFUSED_STATUS = {401, 403, 406, 451}
 TRANSIENT_STATUS = {408, 425, 429, 500, 502, 503, 504}
 MAX_WORKERS = 4
@@ -200,14 +198,14 @@ class Refused(Exception):
 
 
 class Http:
-    """Small HTTP client: default User-Agent first; on refusal, one retry with
-    a Chrome User-Agent; refused again -> Refused (the run stops). Transient
-    errors are retried with exponential backoff."""
+    """Small HTTP client with the default User-Agent. A refused request
+    (REFUSED_STATUS) is not retried: it raises Refused, naming the HTTP status
+    and the URL, and the run stops. Transient errors are retried with
+    exponential backoff."""
 
     def __init__(self, log_path, timeout=120, retries=4):
         self.timeout = timeout
         self.retries = retries
-        self.ua_mode = "default"
         self.lock = threading.Lock()
         self.local = threading.local()
         self.log_path = log_path
@@ -225,20 +223,19 @@ class Http:
             self.local.s = s
         return s
 
-    def _log(self, caseid, kind, url, status, nbytes, ua):
+    def _log(self, caseid, kind, url, status, nbytes):
         cohort = "" if caseid is None else ("S-dev" if caseid in S_DEV else "S-ob")
         with self.lock:
+            # the user_agent column stays, so that the log keeps one layout; it is always "default"
             self.log_w.writerow([dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
                                  "" if caseid is None else caseid, cohort, kind, url,
-                                 status, nbytes, ua])
+                                 status, nbytes, "default"])
             self.log_f.flush()
 
-    def _once(self, url, dest, ua, caseid, kind):
-        headers = {} if ua == "default" else {"User-Agent": CHROME_UA}
-        with self._session().get(url, headers=headers, stream=True,
-                                 timeout=self.timeout) as r:
+    def _once(self, url, dest, caseid, kind):
+        with self._session().get(url, stream=True, timeout=self.timeout) as r:
             if r.status_code != 200:
-                self._log(caseid, kind, url, r.status_code, 0, ua)
+                self._log(caseid, kind, url, r.status_code, 0)
                 return r.status_code, None
             # Content-Length (if given) refers to the encoded body: count raw bytes.
             expected = r.headers.get("Content-Length")
@@ -252,7 +249,7 @@ class Http:
             finally:
                 if dest:
                     out.close()
-            self._log(caseid, kind, url, 200, n, ua)
+            self._log(caseid, kind, url, 200, n)
             if expected is not None and int(expected) != n:
                 raise IOError(f"short read {n} of {expected} bytes")
             enc = r.headers.get("Content-Encoding", "")
@@ -263,26 +260,17 @@ class Http:
         its size; otherwise return (body bytes, content-encoding)."""
         if caseid is not None:
             guard(caseid)
-        tried_chrome = False
         attempt = 0
         while True:
-            with self.lock:
-                ua = self.ua_mode
             try:
-                status, res = self._once(url, dest, ua, caseid, kind)
+                status, res = self._once(url, dest, caseid, kind)
             except (requests.ConnectionError, requests.Timeout,
                     requests.exceptions.ChunkedEncodingError, IOError) as e:
                 status, res = None, e
             if status == 200:
                 return res
             if status in REFUSED_STATUS:
-                if ua == "default":
-                    with self.lock:
-                        self.ua_mode = "chrome"
-                    tried_chrome = True
-                    continue
-                if tried_chrome or ua == "chrome":
-                    raise Refused(f"HTTP {status} with Chrome User-Agent: {url}")
+                raise Refused(f"HTTP {status} for {url}")
             if status is not None and status not in TRANSIENT_STATUS:
                 raise IOError(f"HTTP {status}: {url}")
             attempt += 1
@@ -872,7 +860,6 @@ def main(argv=None):
                    "cross_check_original": f"{API}/<caseid>.vital",
                    "cross_check_csv": f"{API}/<tid> ({CSV_SHIFT_TRACK})"},
         "time_zero": "vital-file header dtstart (= case-table casestart 0)",
-        "user_agent_mode": http.ua_mode,
         "cohort_counts": counts,
         "selected_this_run": len(todo),
         "cohort_cases": len(selected),
@@ -887,7 +874,7 @@ def main(argv=None):
     print(json.dumps({k: log[k] for k in ("complete", "failed", "both_waveforms_present",
                                           "total_npz_bytes", "run_seconds")}, default=_json_default))
     if refused:
-        sys.exit("STOPPED: requests refused even with a Chrome User-Agent.")
+        sys.exit(f"STOPPED: request refused ({refused}); refused requests are not retried.")
 
 
 def _version(pkg):

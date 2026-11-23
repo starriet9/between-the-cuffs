@@ -22,11 +22,11 @@ def test_facts_keep_ug_and_mg_apart():
         for label, vals in T.facts(c, series[c.caseid]):
             for v in vals:
                 assert not ("µg" in v and checks.MG.search(v)), v
-            if label.startswith("Phenylephrine"):
-                assert vals == [T.phenylephrine_text(c)] and ("µg" in vals[0] or vals[0] == "not recorded")
+            if label.startswith("Phenylephrine"):       # presence only: the amounts are VitalDB data
+                assert vals == [T.phenylephrine_text(c)] and vals[0] in ("recorded", "none recorded", "not recorded")
                 seen_ug = True
             if label.startswith("Ephedrine"):
-                assert vals == [T.ephedrine_text(c)] and ("mg" in vals[0] or vals[0] == "not recorded")
+                assert vals == [T.ephedrine_text(c)] and vals[0] in ("recorded", "none recorded", "not recorded")
                 seen_mg = True
     assert seen_ug and seen_mg
 
@@ -54,8 +54,7 @@ def test_placeholders_are_found(bad):
                for p in checks.content_problems({"x": f"<p>{bad}</p>"}))
 
 
-@pytest.mark.parametrize("bad", ["/" + "home/someone/x", "AI-assisted analysis", "AI-generated text", "C:\\Users\\x",
-                                 "file:///tmp/a", "/Users/x/y"])
+@pytest.mark.parametrize("bad", ["/" + "home/someone/x", "C:\\Users\\x", "file:///tmp/a", "/Users/x/y"])
 def test_forbidden_strings_are_found(bad):
     assert checks.content_problems({"x": bad}, extra_patterns=[])
 

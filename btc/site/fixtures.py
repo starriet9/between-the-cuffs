@@ -26,6 +26,7 @@ SDEV_M2 = 6.84                    # invented S-dev mean patient RMSE of M2, mmHg
 CASE_IDS = tuple(range(9001, 9022))
 NOT_ANALYSABLE = {9015: "3 valid readings in the window"}
 PUMP_CASES = (9004, 9008, 9011, 9017, 9020)
+CERCLAGE_SDEV = (30, 333)         # invented S-dev cerclage cases, marked in the per-patient figure (SPEC §6.7)
 NEITHER_CASES = (9002, 9010, 9014, 9019)
 
 
@@ -262,7 +263,8 @@ def _hyp(events: int, flagged: dict, fa: dict) -> pd.DataFrame:
 
 
 def write_results_tree(root: Path, variant: str, cases: list | None = None, series: dict | None = None) -> dict:
-    """Write `<root>/results/...` and `<root>/cases/...` for one variant; returns the two paths."""
+    """Write `<root>/results/...`, `<root>/cases/...` and the S-dev case table `<root>/sdev_cases.parquet`
+    (case IDs and cerclage flags only) for one variant; returns the three paths."""
     root = Path(root)
     rng = np.random.default_rng(20261118)
     hi, extra = headline_inputs(variant)
@@ -288,7 +290,11 @@ def write_results_tree(root: Path, variant: str, cases: list | None = None, seri
                  "M3": hi.m3_m2.mean_model, "M4": hi.m4_m2.mean_model, "M3-P1": hi.m3p1_m2.mean_model,
                  "M4-P1": hi.m4p1_m2.mean_model}
     w.csv("confirmatory/model_summary.csv", _model_summary(dev_means, hi.N, rng))
-    w.csv("confirmatory/per_patient_primary.csv", _per_patient(dev_means, np.arange(1, hi.N + 1) * 3, rng))
+    dev_ids = np.arange(1, hi.N + 1) * 3
+    w.csv("confirmatory/per_patient_primary.csv", _per_patient(dev_means, dev_ids, rng))
+    root.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame({"caseid": dev_ids, "cerclage": np.isin(dev_ids, CERCLAGE_SDEV)}).to_parquet(
+        root / "sdev_cases.parquet", index=False)
     gb_meets = extra.get("gb_meets", sel["row"] in (2, 3, 4, 5))
     gbx = C("GB-full", "GB-cuff", 0.058, 0.021, 0.094, base=6.95)
     w.json("secondary/summary.json", {"stage": "S-dev secondary analyses (SPEC §6.6-§6.8)",
@@ -326,4 +332,4 @@ def write_results_tree(root: Path, variant: str, cases: list | None = None, seri
     fl["M3"], fl["M4-P1"] = round((fl["M2"] + fl["M4"]) / 2), fl["M2"]
     w2.csv("after_frozen_scoring/hypotension.csv", _hyp(ev, fl, {"M2": 0.81, "M3": 0.85, "M4": 0.83, "M4-P1": 0.80}))
     write_cases(root / "cases", cases, series, synthetic=True)
-    return {"results": res, "cases": root / "cases"}
+    return {"results": res, "cases": root / "cases", "sdev_cases": root / "sdev_cases.parquet"}

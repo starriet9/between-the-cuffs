@@ -16,11 +16,13 @@ The headline words come only from `btc/models/headline.py`, through the files th
     sob/frozen_scoring/per_patient_primary.csv
     sob/after_frozen_scoring/hypotension.csv
 
-and the case folder of `btc/site/series.py`. The label is split off the answer line with
-`headline.label()` on the stored decision, and the answer line must start with it.
+the case folder of `btc/site/series.py`, and the cerclage flags of the S-dev case table
+(`data/derived/sdev_cases.parquet`, column `cerclage`; SPEC §2.2, §6.7). The label is split off the
+answer line with `headline.label()` on the stored decision, and the answer line must start with it.
 """
 from __future__ import annotations
 
+import errno
 import json
 import math
 from dataclasses import dataclass, field
@@ -124,6 +126,7 @@ class SiteData:
     featured: dict              # rule -> caseid
     n_analysable_sob: int
     n_nmb_sob: int = 0          # analysable but not analysed: neuromuscular blocker recorded (SPEC §2.2)
+    cerclage: frozenset | None = None   # S-dev cerclage case IDs (SPEC §6.7); None = flags not loaded
     commit: str | None = None
     variant: str = ""
     notes: list = field(default_factory=list)
@@ -132,10 +135,16 @@ class SiteData:
     def scored_cases(self) -> list:
         return [c for c in self.cases if c.scored]
 
+    @property
+    def cerclage_sdev(self) -> list:
+        """The cerclage cases of the S-dev per-patient file, sorted: the cases the per-patient figure marks."""
+        ids = set(int(c) for c in self.per_patient["S-dev"]["caseid"])
+        return sorted(ids & set(self.cerclage or ()))
+
 
 def answer_emphasis(row: int, rest: str, x: RR, G: float) -> list:
-    """Substrings of the answer line set in semibold (landing design §2.2): X% together with the
-    mmHg pair, never X% alone; row 6: 'did not meet the pre-specified rule' and G%; row 1: none
+    """Substrings of the answer line set in semibold on the page: X% together with the mmHg pair,
+    never X% alone; row 6: 'did not meet the pre-specified rule' and G%; row 1: none
     [judgment: with the placebo failed, no number is emphasised]."""
     if row == 1:
         return []
@@ -178,7 +187,26 @@ def _is_synthetic(meta: dict | None) -> bool:
     return "synthetic" in str((meta or {}).get("data", "")).lower()
 
 
-def load_site_data(results_root: Path, cases_dir: Path, config: SiteConfig, variant: str = "") -> SiteData:
+def load_cerclage(path: Path, sdev_caseids) -> frozenset:
+    """S-dev case IDs flagged `cerclage` in the S-dev case table. Every case of the S-dev per-patient file
+    must be in the table, so that a wrong or stale table cannot pass unnoticed."""
+    p = Path(path)
+    if not p.exists():
+        raise FileNotFoundError(errno.ENOENT, "missing input", str(p))
+    t = pd.read_parquet(p, columns=["caseid", "cerclage"])
+    if t["cerclage"].isna().any():
+        raise ValueError(f"{p.name}: missing cerclage flags")
+    missing = sorted(set(int(c) for c in sdev_caseids) - set(int(c) for c in t["caseid"]))
+    if missing:
+        raise ValueError(f"{p.name}: {len(missing)} case(s) of the S-dev per-patient file are not in this table "
+                         f"(first: {missing[0]})")
+    return frozenset(int(c) for c in t.loc[t["cerclage"].astype(bool), "caseid"])
+
+
+def load_site_data(results_root: Path, cases_dir: Path, config: SiteConfig, variant: str = "",
+                   sdev_cases: Path | None = None) -> SiteData:
+    """`sdev_cases`: the S-dev case table with the cerclage flags; without it `cerclage` stays None, which
+    a preview accepts and the publish build refuses."""
     r = Path(results_root)
     rd = lambda p: json.loads((r / p).read_text())
     conf = rd("sdev/confirmatory/summary.json")
@@ -198,6 +226,7 @@ def load_site_data(results_root: Path, cases_dir: Path, config: SiteConfig, vari
     pp = {"S-dev": _csv(r / "sdev/confirmatory/per_patient_primary.csv"),
           "S-ob": _csv(r / "sob/frozen_scoring/per_patient_primary.csv")}
     syn_cases, cases, series = load_cases(cases_dir)
+    cerclage = None if sdev_cases is None else load_cerclage(sdev_cases, pp["S-dev"]["caseid"])
     site = SiteData(
         synthetic=syn_cases or any(_is_synthetic(m) for m in metas),
         provenance=[str((m or {}).get("data")) for m in metas], config=config, headline=hl,
@@ -207,13 +236,13 @@ def load_site_data(results_root: Path, cases_dir: Path, config: SiteConfig, vari
         per_patient={k: v[["caseid", "model", "rmse"]].copy() for k, v in pp.items()},
         cases=cases, series=series, featured=select_featured(cases),
         n_analysable_sob=int(frz["n_analysable_cases"]), n_nmb_sob=int(frz["n_nmb_recorded_cases"]),
-        commit=(conf.get("meta") or {}).get("commit"),
+        cerclage=cerclage, commit=(conf.get("meta") or {}).get("commit"),
         variant=variant)
     return site
 
 
 def consistency_problems(site: SiteData) -> list:
-    """Cross-checks between the result files and the case folder (landing design §6.2, step 8)."""
+    """Cross-checks between the result files and the case folder; the publish build refuses on any."""
     out = []
     scored = site.scored_cases
     if len(scored) != site.headline.n:

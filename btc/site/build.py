@@ -2,10 +2,10 @@
 
 preview (`build_site(..., publish=False)`): any input, synthetic included; writes `<out>/index.html`,
     `<out>/assets/...` and `<out>/README.md` (images referenced as `assets/...`).
-publish (`publish=True`): refuses synthetic inputs, inconsistent case files and, after rendering into a
-    staging folder, any placeholder, forbidden string, unit mix, parity failure, external request or a
-    page heavier than 1 MB before case images. Only then are `docs/index.html`, `docs/assets/` and
-    `docs/.nojekyll` replaced and the README written (images referenced as `docs/assets/...`).
+publish (`publish=True`): refuses synthetic inputs, inconsistent case files, missing cerclage flags and,
+    after rendering into a staging folder, any placeholder, forbidden string, unit mix, parity failure,
+    external request or a page heavier than 1 MB before case images. Only then are `docs/index.html`,
+    `docs/assets/` and `docs/.nojekyll` replaced and the README written (images referenced as `docs/assets/...`).
     `allow_synthetic=True` lifts only the synthetic refusal, for end-to-end tests that publish a fully
     synthetic chain into a temporary folder; every other check still applies and the watermark stays.
 Expensive per-case images and replays are cached by content hash.
@@ -205,6 +205,9 @@ def build_site(site, out_dir: Path, *, publish: bool = False, readme_path: Path 
         cp = consistency_problems(site)
         if site.config.deviations is None:
             cp.append("deviations count not set in the site settings (see REPORT.md)")
+        if site.cerclage is None:
+            cp.append("no cerclage flags: the per-patient figure marks the cerclage cases (SPEC §6.7); "
+                      "give the S-dev case table (data/derived/sdev_cases.parquet)")
         if cp:
             raise PublishRefused("refused: " + "; ".join(cp))
     cache.mkdir(parents=True, exist_ok=True)

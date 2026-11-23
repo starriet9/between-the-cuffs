@@ -5,12 +5,16 @@ import subprocess
 import sys
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
 import pytest
+from matplotlib.colors import to_hex, to_rgb
 from PIL import Image, ImageChops
 
-from btc.site import checks
+from btc.site import checks, figures as Fg, fixtures as FX
 from btc.site.build import MAX_WEIGHT, PublishRefused, build_site
-from btc.site.theme import IMAGE_CREDIT, SYNTHETIC_MARK
+from btc.site.results import load_cerclage
+from btc.site.theme import CERCLAGE, IMAGE_CREDIT, SYNTHETIC_MARK
 
 from site_support import site_for
 
@@ -125,6 +129,54 @@ def test_preview_readme_and_page_pass_parity(preview):
     assert not [p for p in res.problems if "differs" in p]
 
 
+# --- cerclage cases in the per-patient figure (SPEC §6.7) ---------------------------------------------------
+
+def _drawn(monkeypatch, site, tmp_path):
+    figs = []
+    monkeypatch.setattr(Fg, "save_png", lambda fig, path, synthetic: figs.append(fig))
+    Fg.per_patient_figure(site, tmp_path / "pp.png", True)
+    fig = figs[0]
+    mine = lambda ln: to_hex(ln.get_color()) == to_hex(CERCLAGE)
+    by_colour = [sorted(round(float(ln.get_ydata()[0]), 9) for ln in ax.lines if mine(ln)) for ax in fig.axes]
+    keys = [t.get_text() for lg in fig.legends for t in lg.get_texts()]
+    return by_colour, keys
+
+
+def test_per_patient_figure_marks_the_cerclage_cases_in_sdev_only(preview, monkeypatch, tmp_path):
+    site, _ = preview
+    assert site.cerclage == frozenset(FX.CERCLAGE_SDEV) and site.cerclage_sdev == sorted(FX.CERCLAGE_SDEV)
+    pp = site.per_patient["S-dev"]
+    m0 = pp.loc[pp["model"] == "M0"].set_index("caseid")["rmse"]
+    (dev, ob), keys = _drawn(monkeypatch, site, tmp_path)
+    assert dev == sorted(round(float(m0.loc[c]), 9) for c in FX.CERCLAGE_SDEV)       # exactly those patients
+    assert ob == [] and keys == [f"cerclage ({len(FX.CERCLAGE_SDEV)})"]
+    # an S-ob case ID among the flags changes nothing: the S-ob panel marks nothing
+    sob_id = site.scored_cases[0].caseid
+    (dev2, ob2), keys2 = _drawn(monkeypatch, dataclasses.replace(site, cerclage=site.cerclage | {sob_id}), tmp_path)
+    assert (dev2, ob2, keys2) == (dev, [], keys)
+    # no flags (preview without the case table): no orange line and no key
+    assert _drawn(monkeypatch, dataclasses.replace(site, cerclage=None), tmp_path) == ([[], []], [])
+
+
+def test_per_patient_png_has_the_cerclage_colour_in_the_left_panel_only(preview):
+    site, res = preview
+    a = np.asarray(Image.open(res.out_dir / "assets/img/per-patient.png").convert("RGB")).astype(int)
+    near = np.abs(a - np.array(to_rgb(CERCLAGE)) * 255).sum(axis=2) < 40
+    w = a.shape[1]
+    assert near[:, : w // 2].sum() > 100 and near[:, w // 2:].sum() == 0
+
+
+def test_cerclage_table_must_cover_the_sdev_per_patient_cases(preview, tmp_path):
+    site, _ = preview
+    ids = sorted(site.per_patient["S-dev"]["caseid"].unique())
+    t = tmp_path / "sdev_cases.parquet"
+    pd.DataFrame({"caseid": ids[1:], "cerclage": False}).to_parquet(t, index=False)
+    with pytest.raises(ValueError, match="1 case"):
+        load_cerclage(t, ids)
+    with pytest.raises(FileNotFoundError):
+        load_cerclage(tmp_path / "absent.parquet", ids)
+
+
 # --- publish refusals ----------------------------------------------------------------------------------
 
 def _real_like(site, **config):
@@ -162,6 +214,15 @@ def test_publish_refuses_nan_and_unknown_deviations(preview, tmp_path):
                    cache_dir=res.out_dir.parent / "cache", replay_rules=())
 
 
+def test_publish_refuses_without_cerclage_flags(preview, tmp_path):
+    site, res = preview
+    good = _real_like(site, author_name="A. Author", contact="author@example.org")
+    with pytest.raises(PublishRefused, match="cerclage"):
+        build_site(dataclasses.replace(good, cerclage=None), tmp_path / "docs", publish=True,
+                   readme_path=tmp_path / "README.md", cache_dir=res.out_dir.parent / "cache", replay_rules=())
+    assert not (tmp_path / "docs").exists() and not (tmp_path / "README.md").exists()
+
+
 def test_publish_succeeds_when_everything_is_filled(preview, tmp_path):
     site, res = preview
     good = _real_like(site, author_name="A. Author", contact="author@example.org")
@@ -180,9 +241,11 @@ def test_cli_publish_refuses_synthetic_results(preview, tmp_path):
     site, res = preview
     fx = res.out_dir.parent / "fx" / "row3"
     before = sorted(p.name for p in (ROOT / "docs").iterdir()) if (ROOT / "docs").exists() else None
-    r = subprocess.run([sys.executable, str(ROOT / "scripts/build_site.py"), "--publish", "--results", str(fx / "results"),
-                        "--cases-dir", str(fx / "cases"), "--readme", str(tmp_path / "README.md")],
-                       capture_output=True, text=True)
+    cmd = [sys.executable, str(ROOT / "scripts/build_site.py"), "--publish", "--results", str(fx / "results"),
+           "--cases-dir", str(fx / "cases"), "--readme", str(tmp_path / "README.md")]
+    r = subprocess.run([*cmd, "--sdev-cases", str(fx / "sdev_cases.parquet")], capture_output=True, text=True)
     assert r.returncode == 2 and "synthetic" in r.stderr
+    r = subprocess.run([*cmd, "--sdev-cases", str(tmp_path / "absent.parquet")], capture_output=True, text=True)
+    assert r.returncode == 2 and "missing input" in r.stderr and "absent.parquet" in r.stderr
     after = sorted(p.name for p in (ROOT / "docs").iterdir()) if (ROOT / "docs").exists() else None
     assert before == after and not (tmp_path / "README.md").exists()

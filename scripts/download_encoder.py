@@ -13,8 +13,9 @@ anything (`btc/encoder.py` holds no URL) and checks size and MD5 again before it
 The file is untrusted input: `btc.encoder.load_model` reads it with `torch.load(...,
 weights_only=True)` only.
 
-Requests use the default User-Agent; if refused (HTTP 403 or 429), one retry with a Chrome
-User-Agent, then the script stops (project rule). No personal detail is sent.
+The request uses the default User-Agent and sends no personal detail. A refused request (HTTP 403
+or 429) is not retried: the script stops with the HTTP status and the URL, as it does for any other
+failed request.
 """
 from __future__ import annotations
 
@@ -30,14 +31,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from btc import encoder as E  # noqa: E402
 
 URL = f"https://zenodo.org/api/records/{E.ZENODO_RECORD}/files/{E.WEIGHTS_NAME}/content"
-CHROME_UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
-             "Chrome/131.0.0.0 Safari/537.36")
 REFUSED = (403, 429)
 
 
-def _fetch(url: str, dest: Path, ua: str | None, timeout: float) -> int:
-    headers = {"User-Agent": ua} if ua else {}
-    with requests.get(url, headers=headers, stream=True, timeout=timeout) as r:
+def _fetch(url: str, dest: Path, timeout: float) -> int:
+    with requests.get(url, stream=True, timeout=timeout) as r:
         if r.status_code != 200:
             return r.status_code
         with dest.open("wb") as f:
@@ -58,12 +56,11 @@ def main(argv=None) -> int:
         return 0
     out.parent.mkdir(parents=True, exist_ok=True)
     part = out.with_suffix(out.suffix + ".part")
-    status, ua_used = _fetch(URL, part, None, a.timeout), "default"
-    if status in REFUSED:
-        status, ua_used = _fetch(URL, part, CHROME_UA, a.timeout), "chrome"
+    status = _fetch(URL, part, a.timeout)
     if status != 200:
         part.unlink(missing_ok=True)
-        print(f"STOPPED: HTTP {status} ({ua_used} User-Agent) for {URL}", file=sys.stderr)
+        what = "request refused" if status in REFUSED else "request failed"
+        print(f"STOPPED: {what}: HTTP {status} for {URL}", file=sys.stderr)
         return 2
     try:
         info = E.check_weights(part)
@@ -73,7 +70,7 @@ def main(argv=None) -> int:
         return 3
     part.rename(out)
     log = {"url": URL, "record": E.ZENODO_RECORD, "doi": E.ZENODO_DOI, "file": E.WEIGHTS_NAME,
-           "size": info["size"], "md5": info["md5"], "sha256": info["sha256"], "user_agent": ua_used,
+           "size": info["size"], "md5": info["md5"], "sha256": info["sha256"],
            "downloaded_utc": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")}
     (out.parent / "download_log.json").write_text(json.dumps(log, indent=1) + "\n")
     print(json.dumps(log, indent=1))

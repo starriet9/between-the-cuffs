@@ -8,7 +8,7 @@ From a clone of the repository at main, with uv (https://docs.astral.sh/uv/) and
 
 `uv run --locked --group encoder` creates the environment pinned in `uv.lock` (Python 3.13 and the exact
 package versions of the original runs, with the CPU build of torch for the exploratory encoder check) and
-runs this script in it. The run needs network access to https://api.vitaldb.net (about 1.7 GB are
+runs this script in it. The run needs network access to https://api.vitaldb.net (about 1.8 GB are
 downloaded and 0.4 GB of case archives are kept) and to https://zenodo.org (the 23-MB encoder weights),
 and a POSIX system (Linux or macOS: it links folders with symbolic links).
 

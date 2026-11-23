@@ -254,8 +254,10 @@ def _config(path: Path) -> Path:
 def test_publish_runs_on_the_synthetic_chain_only_with_the_test_flag(chain):
     tmp = chain["tmp"]
     cfg = _config(tmp / "site.json")
+    sdev_cases = tmp / "sdev_cases.parquet"                                 # the synthetic S-dev case table
+    chain["syn"]["sdev"]["cases"][["caseid", "cerclage"]].to_parquet(sdev_cases, index=False)
     base = ["scripts/build_site.py", "--publish", "--results", str(chain["out"]), "--cases-dir", str(chain["cases"]),
-            "--config", str(cfg), "--jobs", "2"]
+            "--sdev-cases", str(sdev_cases), "--config", str(cfg), "--jobs", "2"]
     r = _run(*base, "--readme", str(tmp / "refused" / "README.md"))
     assert r.returncode == 2 and "synthetic" in r.stderr                    # the real publish refuses
     r = _run(*base, "--test-allow-synthetic", "--out", str(ROOT / "docs"), "--readme", str(tmp / "x.md"))

@@ -76,10 +76,19 @@ AUTHOR_NOTE = ("The echo and placebo controls ask of a time-series model the que
 
 SHEET_CAPTION = ("Every case scored in the single frozen run; none is left out. Sorted by the full model's error, "
                  "lowest first. Single cases show what the models did; they do not decide the answer.")
-VASO_NOTE = "Bolus times are not recorded. Chart totals miss pump infusions."
-PER_PATIENT_ALT = ("Per-patient RMSE of M0, M2, M4 and M4-P1: one line per patient, for the non-cesarean and "
-                   "the cesarean cases.")
-PER_PATIENT_CAPTION = "Each grey line is one patient; the larger marks are the patient-level means."
+# Vasopressor amounts are VitalDB case-table values and are not copied (SPEC §2.1); the page says whether
+# each drug was charted and where the amounts are.
+def vaso_note(caseid) -> str:
+    return (f"Bolus times are not recorded, and the chart field misses pump infusions. Amounts are in the "
+            f"VitalDB case table (case {caseid}); they are not copied here.")
+def per_patient_alt(n_cerclage: int) -> str:
+    return ("Per-patient RMSE of M0, M2, M4 and M4-P1: one line per patient, for the non-cesarean and the cesarean "
+            f"cases. The {n_cerclage} analysed cerclage cases among the non-cesarean cases are drawn in orange.")
+
+
+def per_patient_caption(n_cerclage: int) -> str:
+    return (f"Each grey line is one patient; the orange lines are the {n_cerclage} analysed cerclage cases among the "
+            "non-cesarean cases. The larger marks are the patient-level means.")
 
 
 @dataclass
@@ -137,7 +146,7 @@ def registration_nodes(site) -> list:
         [Seg("link", "Pre-registered", "prereg"), t(" on "), Seg("date", c.registered_date),
          t(f" (public release {c.registered_public_date}), before any model was fitted")],
         [t("models frozen "), Seg("date", c.frozen_date, "frozen")],
-        [t("cesarean cases scored once on "), Seg("date", c.scored_date, "scored")],
+        [t("cesarean cases scored once on "), Seg("date", c.scored_date, "scored"), t("; dates in KST (UTC+9)")],
     ]
     if c.deviations:
         k = int(c.deviations)
@@ -235,8 +244,8 @@ def blocks(site) -> list:
     b.append(Block(5, "models", "Error by model", [
         Unit("table", [], {"head": head, "rows": rows}),
         Unit("p", [t(site.hypotension_line)]),
-        Unit("figure", [], {"alt": PER_PATIENT_ALT, "img": "img/per-patient.png"}),
-        Unit("p", [t(PER_PATIENT_CAPTION)]),
+        Unit("figure", [], {"alt": per_patient_alt(len(site.cerclage_sdev)), "img": "img/per-patient.png"}),
+        Unit("p", [t(per_patient_caption(len(site.cerclage_sdev)))]),
     ]))
     lim = limits(site)
     b.append(Block(6, "limits", "What this does not show", [
@@ -251,7 +260,7 @@ def blocks(site) -> list:
                    Seg("link", "doi:10.1038/s41597-022-01411-5", "doi"),
                    t(". No VitalDB data are redistributed here; the code downloads them from the public API "
                      "at run time.")]),
-        Unit("p", [t("Design, analysis and code: "), t(site.config.author_name), t(" ("),
+        Unit("p", [t("Author: "), t(site.config.author_name), t(" ("),
                    Seg("link", site.config.contact, "contact"), t(").")]),
     ]))
     return b
@@ -261,18 +270,19 @@ def blocks(site) -> list:
 # Facts panel and tiles (page only). Phenylephrine (µg) and ephedrine (mg) stay on separate lines.
 # ---------------------------------------------------------------------------
 
-def _amount(v, unit: str) -> str:
+def _charted(v) -> str:
+    """Whether a chart total is present, without the amount (the amounts are VitalDB data)."""
     if v is None:
         return "not recorded"
-    return f"{v:g} {unit}"
+    return "recorded" if v > 0 else "none recorded"
 
 
 def phenylephrine_text(c) -> str:
-    return _amount(c.phenylephrine_ug, "µg")
+    return _charted(c.phenylephrine_ug)
 
 
 def ephedrine_text(c) -> str:
-    return _amount(c.ephedrine_mg, "mg")
+    return _charted(c.ephedrine_mg)
 
 
 def tile_error_text(c) -> str:
@@ -294,8 +304,8 @@ def facts(c, s) -> list:
             f"{c.new_onset_80}" + ("" if not c.new_onset_80 else
                                    f"; flagged one reading ahead: cuff only {c.flagged_80['M2']}, "
                                    f"+ HR + pleth {c.flagged_80['M4']}")]),
-        ("Phenylephrine (chart total)", [phenylephrine_text(c)]),
-        ("Ephedrine (chart total)", [ephedrine_text(c)]),
+        ("Phenylephrine (chart)", [phenylephrine_text(c)]),
+        ("Ephedrine (chart)", [ephedrine_text(c)]),
         ("Pump track", ["yes" if c.pump_track else "none"]),
     ]
     return rows

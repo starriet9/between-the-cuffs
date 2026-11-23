@@ -1,7 +1,8 @@
-"""Shared visual tokens for the page and every figure (landing design §4).
+"""Shared visual tokens for the page and every figure.
 
 One meaning for the accent: heart rate, pleth and the model that uses them. Grey = cuff only.
-Black = measured cuff readings. No red or green in any published image.
+Black = measured cuff readings. Orange marks the cerclage cases in the per-patient figure, and nothing
+else. No red or green in any published image.
 """
 from __future__ import annotations
 
@@ -11,7 +12,7 @@ HERE = Path(__file__).resolve().parent
 FONT_DIR = HERE / "fonts"
 STATIC_DIR = HERE / "static"
 
-# Colour tokens (light only; landing design §4.2)
+# Colour tokens (light only)
 BG = "#FFFFFF"
 BG_SOFT = "#F4F6F8"
 INK = "#14181F"
@@ -20,6 +21,7 @@ RULE = "#D9DEE5"
 MUTE = "#8A929D"
 ACCENT = "#1B62A8"
 ACCENT_TINT = "#DCE8F4"
+CERCLAGE = "#B85C00"       # per-patient figure only: the S-dev cerclage cases (SPEC §6.7)
 SYNTH = "#B3261E"          # synthetic watermark only; never in a published image
 
 SANS = "Source Sans 3"

@@ -1,4 +1,4 @@
-"""Every image of the README and the page (landing design §4.5, §5; SPEC §8.1).
+"""Every image of the README and the page (SPEC §8.1).
 
 All layouts are written in CSS pixels at 1x (figure dpi 100) and saved at 2x as opaque white PNGs,
 except the replay, whose frames are encoded to MP4/WebM (page) and GIF (README). One set of drawing
@@ -18,8 +18,8 @@ from pathlib import Path
 
 import numpy as np
 
-from .theme import (ACCENT, ACCENT_TINT, BG, IMAGE_CREDIT, INK, INK_2, MUTE, RULE, SYNTH, SYNTHETIC_MARK, px,
-                    use_matplotlib_theme)
+from .theme import (ACCENT, ACCENT_TINT, BG, CERCLAGE, IMAGE_CREDIT, INK, INK_2, MUTE, RULE, SYNTH, SYNTHETIC_MARK,
+                    px, use_matplotlib_theme)
 
 use_matplotlib_theme()
 
@@ -512,6 +512,8 @@ PP_MODELS = (("M0", "M0\nlast reading", INK, True), ("M2", "M2\ncuff only", MUTE
 
 
 def per_patient_figure(site, path: Path, synthetic: bool):
+    """One line per patient. In the S-dev panel the cerclage cases are drawn in their own colour, with a key
+    (SPEC §6.7); the S-ob panel marks nothing (every S-ob case is a cesarean section)."""
     W, Hh = 1040, 400
     fig = new_fig(W, Hh)
     h = site.headline
@@ -528,10 +530,20 @@ def per_patient_figure(site, path: Path, synthetic: bool):
         wide = wide.dropna()
         xs = np.arange(len(PP_MODELS))
         alpha = 0.22 if len(wide) > 60 else 0.55
-        for _, r in wide.iterrows():
+        mark = [c for c in site.cerclage_sdev if c in wide.index] if coh == "S-dev" else []
+        rest = wide.drop(index=mark)
+        for _, r in rest.iterrows():
             ax.plot(xs, r.to_numpy(), color=MUTE, lw=px(0.7), alpha=alpha, zorder=1)
-        ax.plot(np.repeat(xs[None, :], len(wide), 0).ravel(), wide.to_numpy().ravel(), ls="none", marker="o",
+        ax.plot(np.repeat(xs[None, :], len(rest), 0).ravel(), rest.to_numpy().ravel(), ls="none", marker="o",
                 ms=px(3), mfc=MUTE, mec="none", alpha=min(1, alpha * 1.6), zorder=2)
+        for c in mark:
+            ax.plot(xs, wide.loc[c].to_numpy(), color=CERCLAGE, lw=px(1.4), marker="o", ms=px(4), mfc=CERCLAGE,
+                    mec="none", zorder=3)
+        if mark:
+            key = Line2D([], [], color=CERCLAGE, lw=px(1.4), marker="o", ms=px(4), mfc=CERCLAGE, mec="none")
+            fig.legend([key], [f"cerclage ({len(mark)})"], loc="upper right",
+                       bbox_to_anchor=((x0 + pw - 28) / W, 1 - 14 / Hh), frameon=False, fontsize=px(DESKTOP.tick),
+                       handlelength=1.9, handletextpad=0.5, borderaxespad=0, borderpad=0, labelcolor=INK_2)
         means = wide.mean()
         for i, (m, lab, col, filled) in enumerate(PP_MODELS):
             ax.plot([i], [means[m]], ls="none", marker="o", ms=px(11), mfc=col if filled else BG, mec=col if

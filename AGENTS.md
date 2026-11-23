@@ -39,7 +39,7 @@ Main result folders: `results/sdev/confirmatory/` (confirmatory S-dev run, tag `
 | Sentence 3: 30 fast-cycling cases, 0.3% (Δ −0.03 mmHg); F −0.9% (95% CI −2.2% to −0.1%), not distinguishable from placebo inputs | `README.md` block 1; `REPORT.md` "Fast-cycling cases", "Withheld-cuff yardstick" | `results/sdev/confirmatory/summary.json` (`fast_cycling`, `yardstick_fast_cycling`, `sentence_3`), `per_patient_primary_wide.csv`, `per_patient_yardstick.csv` | verify 4, verify 5 |
 | Cesarean line: 0.0% (95% CI −0.4% to 0.4%) | `README.md` block 1 | `results/sob/frozen_scoring/summary.json` (`cesarean_line`), `headline.md` | verify 4, verify 5 |
 | Table: mean RMSE (95% CI) of M00, M0, M2, M3, M4, M4-P1 in both cohorts; waveform coverage 97.5% and 100.0% | `README.md` block 5; `REPORT.md` "Error by model", "Error by model, S-ob" | `model_summary.csv` and `per_patient_primary_wide.csv` in `results/sdev/confirmatory/` and `results/sob/frozen_scoring/` | verify 4 (numbers), verify 5 (`README.md` table) |
-| Hypotension line: new-onset readings below 80% of the record-start baseline flagged one reading ahead, per model and cohort | `README.md` block 5; `REPORT.md` "Hypotension line, both cohorts" | `results/sdev/secondary/hypotension.csv`, `results/sob/after_frozen_scoring/hypotension.csv` | verify 5 (line rendered from the two files); the files themselves: `uv run scripts/reproduce.py` |
+| Hypotension line: new-onset readings below 80% of the record-start baseline flagged one reading ahead, per model and cohort | `README.md` block 5; `REPORT.md` "Hypotension line, both cohorts" | `results/sdev/secondary/hypotension.csv`, `results/sob/after_frozen_scoring/hypotension.csv` | verify 5 (line rendered from the two files); the files themselves: `uv run --locked --group encoder scripts/reproduce.py` |
 | Registration: `PREREG.md` and `SPEC.md` 1.5 at `59939b7`, with the SHA-256 of the table; unchanged since | `REPORT.md` "Registration" | git objects; `REPORT.md` registration table | verify 1; `git diff prereg-v1.5 HEAD -- PREREG.md SPEC.md` (empty) |
 | Order: registration → `feature-freeze` → `models-frozen` → first commit with cesarean results; no file under `results/` at the first two tags | `REPORT.md` "Registration", "Frozen models", "Scoring record" | git tags and history | verify 1; `git merge-base --is-ancestor <a> <b>`; `git ls-tree -r feature-freeze -- results` |
 | Public release times of the three tags; `models-frozen` public before the scoring started (19:37:25 and 19:38:48 UTC) | `REPORT.md` "Registration", "Scoring record" | GitHub releases (`published_at`, set by GitHub); `results/sob/frozen_scoring_log.jsonl` | https://github.com/starriet9/between-the-cuffs/releases, or `curl -s https://api.github.com/repos/starriet9/between-the-cuffs/releases`; pushes: https://github.com/starriet9/between-the-cuffs/activity |
@@ -47,10 +47,10 @@ Main result folders: `results/sdev/confirmatory/` (confirmatory S-dev run, tag `
 | Feature code and model core unchanged from `feature-freeze` to `models-frozen`; no code change between the tag and the commits that add the cesarean results | `REPORT.md` "Frozen models", "Scoring record" | git history | verify 1; `git diff --stat feature-freeze models-frozen` |
 | Cesarean cases scored once, at tag `models-frozen`, from a clean tree | `README.md` block 1; `REPORT.md` "Scoring record" | `results/sob/frozen_scoring/STATE.json`, `results/sob/frozen_scoring_log.jsonl`, `meta` of `results/sob/frozen_scoring/summary.json` and `MANIFEST.json` | verify 3 |
 | No VitalDB data redistributed | `README.md` block 8; `REPORT.md` "Data and result files"; `results/README.md` | `.gitignore`; manifests; `results/data_checksums.csv` (checksums only) | verify 2 (listed files not committed), verify 7 (no per-forecast cuff column, no raw data file); `git ls-files data` (empty) |
-| Gradient-boosting check: GB-full vs GB-cuff does not meet the rule, so the fixed README line of `SPEC.md` §6.8 is not added | `REPORT.md` "Gradient-boosting check" | `results/sdev/secondary/summary.json` (`gradient_boosting`), `gb_summary.csv`, `gb_settings.csv` | verify 5 (rule applied to the stored contrasts; README has no such line); the arms: `uv run scripts/reproduce.py` |
+| Gradient-boosting check: GB-full vs GB-cuff does not meet the rule, so the fixed README line of `SPEC.md` §6.8 is not added | `REPORT.md` "Gradient-boosting check" | `results/sdev/secondary/summary.json` (`gradient_boosting`), `gb_summary.csv`, `gb_settings.csv` | verify 5 (rule applied to the stored contrasts; README has no such line); the arms: `uv run --locked --group encoder scripts/reproduce.py` |
 | Deviations: none | `REPORT.md` "Deviations"; `README.md` registration line (no deviation note) | `REPORT.md`; `btc/site/site.json` (`deviations`) | verify 5 |
 | Data snapshot: SHA-256 of every stored array, 3,773 S-dev rows (252 cases) and 325 S-ob rows (21 cases) | `REPORT.md` "Data and result files" | `results/data_checksums.csv`, `results/sdev/data_checksums.csv` | verify 6; a new download writes the same list except the `meta_json` rows (`results/README.md`) |
-| Committed result files are those the runs wrote | `results/README.md` | every `results/**/MANIFEST.json` and `public_tables.json` | verify 2; a full rerun compares every file, the withheld ones included: `uv run scripts/reproduce.py` |
+| Committed result files are those the runs wrote | `results/README.md` | every `results/**/MANIFEST.json` and `public_tables.json` | verify 2; a full rerun compares every file, the withheld ones included: `uv run --locked --group encoder scripts/reproduce.py` |
 
 Not checkable from the repository, as `REPORT.md` "Registration" states: when a model was first fitted and the time of the confirmatory run (author's record, from local file times).
 
@@ -77,10 +77,10 @@ Test suite (no network; some tests use git and a temporary clone; tests that nee
 uv run pytest -q
 ```
 
-Full rerun from the public VitalDB API, comparing every result file with its published SHA-256 (network, about 1.7 GB of downloads; see `scripts/reproduce.py --help`):
+Full rerun from the public VitalDB API, comparing every result file with its published SHA-256 (network; about 1.7 GB from VitalDB and 23 MB of encoder weights from Zenodo; the `encoder` group adds the CPU build of torch; see `scripts/reproduce.py --help`):
 
 ```
-uv run scripts/reproduce.py
+uv run --locked --group encoder scripts/reproduce.py
 ```
 
 Single steps and their order: `results/README.md`, "Regenerating the withheld files".
@@ -127,4 +127,4 @@ print(contrast(bs, e["rmse_M4"], e["rmse_M2"], "M4", "M2"))   # = "M4 vs M2" in 
 
 ## Exploratory encoder check
 
-See `ENCODER_PLAN.md`; results are listed in `REPORT.md`.
+Plan: `ENCODER_PLAN.md`, committed and pushed (commit `29db44b`) before any encoder output was computed; every encoder result file records the plan's SHA-256 and that commit (`meta.plan`, `meta.plan_public`). Results: `results/sdev/exploratory_encoder/` (build check at `a07e0d2`, S-dev run at `d66ad63`) and `results/sob/after_frozen_scoring/exploratory_encoder/` (cesarean step, run once at `dda1d6d`, after the frozen scoring); `REPORT.md`, "Exploratory pretrained-encoder check", lists them with the disclosures and departures. The contrasts are recomputed from the committed per-patient tables by verify 4. The embeddings, the build check and the per-forecast files need a rerun (stages `encoder` and `encoder-sob` of `scripts/reproduce.py`).

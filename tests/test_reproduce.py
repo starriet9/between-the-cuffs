@@ -1,12 +1,15 @@
-"""scripts/reproduce.py: refs, guards, shared data folder, comparison and clean-up.
+"""scripts/reproduce.py: refs, guards, shared data folder, dependencies, comparison and clean-up.
 
-No network and no real data. The orchestration is run on a throwaway git repository whose scripts
-stand in for the analysis scripts: they take the same command lines, apply the same guards (tag at
-HEAD, a clean work tree, `results/frozen/FROZEN.json` committed at HEAD, `BTC_FROZEN_SCORING=1` for
-S-ob and only there), and write outputs that record the git state, so a run at another commit or in a
-dirty tree gives other bytes. The repository's history mirrors the real one: the "original" runs are
-made in the main work tree at the same points (S-dev run at tag feature-freeze, public tables exported
-at a later commit, freeze at the next commit, S-ob at tag models-frozen) and their outputs committed.
+No network, no real data and no torch. The orchestration is run on a throwaway git repository whose
+scripts stand in for the analysis scripts: they take the same command lines, apply the same guards (tag
+at HEAD, a clean work tree, files committed at HEAD, the stored per-forecast files equal to their
+MANIFEST entry, encoder tables built once and by unchanged code, `BTC_FROZEN_SCORING=1` for S-ob and
+only there), and write outputs that record the git state, so a run at another commit or in a dirty tree
+gives other bytes. The repository's history mirrors the real one: the "original" runs are made in the
+main work tree at the same points (S-dev run at tag feature-freeze, public tables exported at a later
+commit, freeze at the next commit, S-ob at tag models-frozen, then the encoder embeddings, features and
+build check at one commit, the encoder S-dev run at the commit that adds build_check.json, and the S-ob
+encoder step at a later commit) and their outputs committed.
 """
 import hashlib
 import importlib.util
@@ -203,6 +206,124 @@ def frozen_scoring(args):
         log("site_cases_written", commit=st["commit"], cases_json_sha256=sha(p))
 
 
+WEIGHTS = DATA / "external" / "papagei" / "papagei_s.pt"
+ENC, ENC_SOB = RESULTS / "sdev" / "exploratory_encoder", RESULTS / "sob" / "after_frozen_scoring" / "exploratory_encoder"
+ENC_TABLES = ("window_embeddings.npy", "window_index.parquet", "window_embeddings_log.json", "features.parquet",
+              "features_log.json")
+
+
+def committed(rel):
+    r = subprocess.run(["git", "rev-parse", "--verify", "-q", f"HEAD:{rel}"], cwd=ROOT, capture_output=True, text=True)
+    return r.returncode == 0 and (ROOT / rel).exists() and r.stdout.strip() == git("hash-object", rel)
+
+
+def stored_ok(rel, manifest, key):
+    m = json.loads((RESULTS / manifest).read_text())
+    return (RESULTS / rel).exists() and m["files"].get(key) == sha(RESULTS / rel)
+
+
+def enc_start(sob):
+    st = state()
+    tree_ok(st, False)
+    if sob and os.environ.get(ENV) != "1":
+        sys.exit("refused: the S-ob encoder step needs BTC_FROZEN_SCORING=1")
+    if not sob and ENV in os.environ:
+        sys.exit(f"refused: {ENV} is set; the S-dev encoder steps never read S-ob data")
+    return st
+
+
+def self_export(folder, st):
+    src = folder / "predictions_primary.csv"
+    t = write(folder / "per_patient_primary_wide.csv", "# " + json.dumps({"commit": st["commit"], "source_sha256": sha(src)}) + "\n")
+    write(folder / "public_tables.json", json.dumps({"meta": {"commit": st["commit"]}, "files": {t.name: sha(t)}}) + "\n")
+
+
+def download_encoder():
+    if WEIGHTS.exists():
+        print("already present and checked")
+        return
+    write(WEIGHTS, "fake weights\n")
+    request("weights")
+
+
+def embeddings(args):
+    st = enc_start(False)
+    npy = DATA / "derived" / "sdev_enc_window_embeddings.npy"
+    if npy.exists():
+        sys.exit("refused: the S-dev embeddings exist already")
+    write(npy, json.dumps({"windows": sha(DATA / "derived" / "sdev_windows.parquet"), "weights": sha(WEIGHTS)}))
+    write(DATA / "derived" / "sdev_enc_window_index.parquet", "index")
+    write(DATA / "derived" / "sdev_enc_window_embeddings_log.json", json.dumps({
+        "git": st, "embeddings_sha256": sha(npy), "runtime": {"workers": int(opt(args, "--jobs"))},
+        "weights": {"file": "data/external/papagei/papagei_s.pt", "sha256": sha(WEIGHTS)}}))
+
+
+def features_enc():
+    st = enc_start(False)
+    f = DATA / "derived" / "sdev_enc_features.parquet"
+    if f.exists():
+        sys.exit("refused: sdev_enc_features.parquet exists already")
+    write(f, json.dumps({"embeddings": sha(DATA / "derived" / "sdev_enc_window_embeddings.npy"),
+                         "instances": sha(DATA / "derived" / "sdev_instances.parquet")}))
+    write(DATA / "derived" / "sdev_enc_features_log.json", json.dumps({"git": st, "features_sha256": sha(f)}))
+
+
+def code_changed_since(commit):
+    return [p for p in git("diff", "--name-only", commit, "HEAD").split() if not p.startswith("results/")]
+
+
+def encoder_check(args):
+    cmd, st = args[0], enc_start(False)
+    npy = DATA / "derived" / "sdev_enc_window_embeddings.npy"
+    log_ = json.loads((DATA / "derived" / "sdev_enc_window_embeddings_log.json").read_text())
+    if log_["embeddings_sha256"] != sha(npy) or code_changed_since(log_["git"]["commit"]):
+        sys.exit("refused: embeddings differ from their log, or code changed since they were built")
+    meta = {"commit": st["commit"], "describe": st["describe"], "status": st["status"], "inputs_sha256": inputs("sdev"),
+            "weights": log_["weights"], "embedding_runtime": log_["runtime"], "embeddings_sha256": sha(npy),
+            "embeddings_built_at_commit": log_["git"]["commit"]}
+    if cmd == "build-check":
+        if (ENC / "build_check.json").exists():
+            sys.exit("refused: build_check.json exists already")
+        write(ENC / "build_check.json", json.dumps({"meta": meta, "r2": 0.7}))
+        return
+    flog = json.loads((DATA / "derived" / "sdev_enc_features_log.json").read_text())
+    feat = DATA / "derived" / "sdev_enc_features.parquet"
+    if not committed("results/sdev/exploratory_encoder/build_check.json") or (ENC / "summary.json").exists():
+        sys.exit("refused: build_check.json not committed at HEAD, or a result exists")
+    if not stored_ok("sdev/confirmatory/predictions_primary.csv", "sdev/MANIFEST.json", "confirmatory/predictions_primary.csv"):
+        sys.exit("refused: the stored confirmatory predictions_primary.csv is missing or differs")
+    if flog["features_sha256"] != sha(feat) or code_changed_since(flog["git"]["commit"]):
+        sys.exit("refused: encoder features differ from their log, or code changed since")
+    meta.update(encoder_features_sha256=sha(feat), encoder_features_built_at_commit=flog["git"]["commit"])
+    w = Writer(ENC, meta)
+    w.write("summary.json", json.dumps({"meta": meta, "n": 3}))
+    w.write("predictions_primary.csv", "# " + json.dumps(meta) + "\ncaseid,y_map\n1,80\n")
+    w.files["build_check.json"] = sha(ENC / "build_check.json")
+    w.manifest("MANIFEST.json")
+    self_export(ENC, st)
+
+
+def encoder_sob(args):
+    st = enc_start(True)
+    if any((DATA / "derived" / f"sob_enc_{n}").exists() for n in ENC_TABLES) or ENC_SOB.exists():
+        sys.exit("refused: the S-ob step runs once")
+    if not stored_ok("sob/frozen_scoring/predictions_primary.csv", "sob/frozen_scoring/MANIFEST.json",
+                     "frozen_scoring/predictions_primary.csv"):
+        sys.exit("refused: the stored frozen-scoring predictions_primary.csv is missing or differs")
+    flog = json.loads((DATA / "derived" / "sdev_enc_features_log.json").read_text())
+    if flog["features_sha256"] != sha(DATA / "derived" / "sdev_enc_features.parquet"):
+        sys.exit("refused: the S-dev encoder features differ from their log")
+    for n in ENC_TABLES:
+        write(DATA / "derived" / f"sob_enc_{n}", n + sha(DATA / "raw" / "sob" / "7.npz"))
+    meta = {"commit": st["commit"], "describe": st["describe"], "inputs_sha256": inputs("sob"),
+            "embedding_runtime": {"workers": int(opt(args, "--jobs"))}, "sdev_encoder_features_sha256": flog["features_sha256"]}
+    w = Writer(ENC_SOB, meta)
+    w.write("summary.json", json.dumps({"meta": meta, "n": 2}))
+    w.write("predictions_primary.csv", "# " + json.dumps(meta) + "\ncaseid,y_map\n7,90\n")
+    w.manifest("MANIFEST.json")
+    self_export(ENC_SOB, st)
+
+
 def export(args):
     st, res = state(), Path(opt(args, "--results"))
     out = Path(opt(args, "--out") or res)
@@ -224,14 +345,20 @@ def main(script, args):
      "pleth_coverage": lambda: build(cohort, ("pleth_coverage",)),
      "run_confirmatory": lambda: confirmatory(args),
      "run_frozen_scoring": lambda: frozen_scoring(args),
-     "export_public_tables": lambda: export(args)}[script]()
+     "export_public_tables": lambda: export(args),
+     "download_encoder": download_encoder,
+     "build_embeddings": lambda: embeddings(args),
+     "build_features_enc": features_enc,
+     "run_encoder_check": lambda: encoder_check(args),
+     "run_encoder_sob": lambda: encoder_sob(args)}[script]()
     return 0
 '''
 
 SCRIPT = ("import sys\nfrom pathlib import Path\nsys.path.insert(0, str(Path(__file__).resolve().parents[1]))\n"
           "import fakepipe\nsys.exit(fakepipe.main({name!r}, sys.argv[1:]))\n")
 SCRIPTS = ("download", "build_instances", "build_windows", "build_features_wf", "pleth_coverage", "run_confirmatory",
-           "run_frozen_scoring", "export_public_tables")
+           "run_frozen_scoring", "export_public_tables", "download_encoder", "build_embeddings", "build_features_enc",
+           "run_encoder_check", "run_encoder_sob")
 
 
 def git(repo, *args, env=None):
@@ -302,10 +429,23 @@ def fake_repo(tmp_path_factory):
     sob_sums = (repo / "data" / "raw" / "sob_checksums.csv").read_text().splitlines()[1:]
     with (repo / "results" / "data_checksums.csv").open("a") as f:
         f.write("".join(f"S-ob,{x}\n" for x in sob_sums))
-    head = commit(repo, "S-ob results")
+    commit(repo, "S-ob results")
+    (repo / "NOTES").write_text("encoder code\n")
+    enc_build = commit(repo, "encoder code", "NOTES")
+    py(repo, "download_encoder")
+    py(repo, "build_embeddings", "--jobs", "3")
+    py(repo, "build_features_enc")
+    py(repo, "run_encoder_check", "build-check")
+    enc_run = commit(repo, "encoder build check")
+    py(repo, "run_encoder_check", "sdev", "--n-jobs", "2")
+    commit(repo, "encoder S-dev result")
+    (repo / "NOTES").write_text("encoder code, S-ob step\n")
+    enc_sob = commit(repo, "encoder S-ob code", "NOTES")
+    py(repo, "run_encoder_sob", "--jobs", "2", "--n-jobs", "2", sob=True)
+    head = commit(repo, "encoder S-ob result")
     assert git(repo, "status", "--porcelain") == ""
     return {"repo": repo, "feature_freeze": ff, "export_sdev": export_sdev, "freeze": freeze, "models_frozen": mf,
-            "export_sob": export_sob, "head": head}
+            "export_sob": export_sob, "enc_build": enc_build, "enc_run": enc_run, "enc_sob": enc_sob, "head": head}
 
 
 def run(repo, *args):
@@ -337,16 +477,29 @@ def test_full_run_is_identical_and_leaves_the_repository_unchanged(fake_repo, mo
     assert rep["summary"]["identical"] == rep["summary"]["compared"] > 0
     assert rep["main"]["commit"] == fake_repo["head"]
     assert {s: r["commit"] for s, r in rep["refs"].items()} == {
-        "sdev": fake_repo["feature_freeze"], "freeze": fake_repo["freeze"], "sob": fake_repo["models_frozen"]}
+        "sdev": fake_repo["feature_freeze"], "freeze": fake_repo["freeze"], "sob": fake_repo["models_frozen"],
+        "encoder": fake_repo["enc_run"], "encoder-sob": fake_repo["enc_sob"]}
+    assert rep["refs"]["encoder"]["extra"] == {k: fake_repo["enc_build"] for k in ("embeddings", "features", "build-check")}
+    assert rep["stages_added"] == {}
     items = {r["item"]: r for r in rep["rows"]}
-    for p in ("results/sdev/confirmatory/predictions_primary.csv", "results/sob/frozen_scoring/predictions_primary.csv"):
+    for p in ("results/sdev/confirmatory/predictions_primary.csv", "results/sob/frozen_scoring/predictions_primary.csv",
+              "results/sdev/exploratory_encoder/predictions_primary.csv",
+              "results/sob/after_frozen_scoring/exploratory_encoder/predictions_primary.csv"):
         assert items[p]["identical"] == "yes" and items[p]["note"] == "not committed"
     for p in ("results/sdev/MANIFEST.json", "results/frozen/MANIFEST.json", "results/frozen/FROZEN.json",
               "results/sob/frozen_scoring/MANIFEST.json", "results/sob/after_frozen_scoring/MANIFEST.json",
               "results/sob/frozen_scoring/STATE.json", "results/sob/frozen_scoring_log.jsonl",
               "data/derived/site/cases.json", "data/derived/sdev_cases.parquet", "data/derived/sob_features_wf.parquet",
-              "results/sdev/confirmatory/public_tables.json", "results/sob/frozen_scoring/per_patient_primary_wide.csv"):
+              "results/sdev/confirmatory/public_tables.json", "results/sob/frozen_scoring/per_patient_primary_wide.csv",
+              "results/sdev/exploratory_encoder/build_check.json", "results/sdev/exploratory_encoder/MANIFEST.json",
+              "results/sdev/exploratory_encoder/public_tables.json",
+              "results/sob/after_frozen_scoring/exploratory_encoder/MANIFEST.json",
+              "results/sob/after_frozen_scoring/exploratory_encoder/per_patient_primary_wide.csv",
+              "data/derived/sdev_enc_window_embeddings.npy", "data/derived/sdev_enc_features.parquet",
+              "data/external/papagei/papagei_s.pt"):
         assert items[p]["identical"] == "yes", p
+    assert items["results/sdev/exploratory_encoder/public_tables.json"]["stage"] == "encoder"
+    assert items["results/sdev/exploratory_encoder/public_tables.json"]["note"] == "written by the stage"
     data = [r for r in rep["rows"] if r["kind"] == "data"]
     assert [r["identical"] for r in data] == ["yes", "yes"] and "meta_json" in data[0]["item"]
     # each step ran at its stage's commit; S-ob steps, and only they, with BTC_FROZEN_SCORING=1
@@ -354,7 +507,12 @@ def test_full_run_is_identical_and_leaves_the_repository_unchanged(fake_repo, mo
     assert by[("sdev", "scripts/run_confirmatory.py --feature-tag")]["commit"] == fake_repo["feature_freeze"]
     assert by[("freeze", "scripts/run_frozen_scoring.py freeze")]["commit"] == fake_repo["freeze"]
     assert by[("sob", "scripts/run_frozen_scoring.py score")]["commit"] == fake_repo["models_frozen"]
-    assert all((s["env"] == {"BTC_FROZEN_SCORING": "1"}) == (s["stage"] == "sob") for s in rep["steps"])
+    assert by[("encoder", "scripts/run_encoder_check.py build-check")]["commit"] == fake_repo["enc_build"]
+    assert by[("encoder", "scripts/run_encoder_check.py sdev")]["commit"] == fake_repo["enc_run"]
+    assert by[("encoder", "scripts/build_embeddings.py --jobs")]["argv"][3] == "3"     # recorded worker count
+    assert by[("encoder-sob", "scripts/run_encoder_sob.py --jobs")]["commit"] == fake_repo["enc_sob"]
+    assert by[("encoder-sob", "scripts/run_encoder_sob.py --jobs")]["argv"][2:] == ["--jobs", "2", "--n-jobs", "2"]
+    assert all((s["env"] == {"BTC_FROZEN_SCORING": "1"}) == (s["stage"] in ("sob", "encoder-sob")) for s in rep["steps"])
     exports = sorted(s["commit"] for s in rep["steps"] if s["stage"] == "export")
     assert exports == sorted([fake_repo["export_sdev"], fake_repo["export_sob"]])
     assert set(rep["elapsed_seconds"]) >= {"sdev", "freeze", "sob", "export", "total"}
@@ -496,6 +654,10 @@ def test_version_problems():
     assert R.version_problems(pp, {"numpy": "2.5.5"}, "3.12.9") == [
         "Python 3.12.9 (requires-python ==3.13.*)", "typing-extensions not installed (pinned 4.16.0)"]
     assert R.version_problems(None, {}, "3.13.0") == []
+    torch = b'[project]\ndependencies = []\n[tool.uv]\nconstraint-dependencies = ["torch==2.15.0"]\n'
+    assert R.version_problems(torch, {"torch": "2.15.0+cpu"}, "3.13.15") == []       # PEP 440 local label
+    assert R.version_problems(torch, {"torch": "2.15.1+cpu"}, "3.13.15") == ["torch 2.15.1+cpu installed, 2.15.0 pinned"]
+    assert R.version_problems(torch, {}, "3.13.15") == []                            # an optional group
 
 
 def test_git_env_appends_settings_and_drops_redirections(tmp_path):
@@ -524,7 +686,45 @@ def test_the_exclude_hides_only_the_linked_data_folder(tmp_path):
 
 
 def test_parse_stages():
-    assert R.parse_stages("all") == ["sdev", "freeze", "sob"]
-    assert R.parse_stages("sob,sdev") == ["sdev", "sob"]             # always in the registered order
+    assert R.parse_stages("all") == ["sdev", "freeze", "sob", "encoder", "encoder-sob"]
+    assert R.parse_stages("encoder,sob,sdev") == ["sdev", "sob", "encoder"]      # always in the order of the runs
     with pytest.raises(Exception):
         R.parse_stages("sdev,ob")
+
+
+def test_nested_output_folders(tmp_path):
+    assert R.stage_of("results/sdev/exploratory_encoder/summary.json") == "encoder"
+    assert R.stage_of("results/sdev/confirmatory/summary.json") == "sdev"
+    assert R.stage_of("results/sob/after_frozen_scoring/exploratory_encoder/x") == "encoder-sob"
+    assert R.stage_of("results/sob/after_frozen_scoring/MANIFEST.json") == "sob"
+    assert R.nested_dirs("sdev") == ["results/sdev/exploratory_encoder"] and R.nested_dirs("encoder") == []
+    import argparse
+    run = R.Run(argparse.Namespace(workdir=tmp_path, data=None, keep=False, jobs=None, ignore_versions=False), ROOT)
+    for rel in ("results/sdev/confirmatory/a.csv", "results/sdev/MANIFEST.json", "results/sdev/exploratory_encoder/b.csv"):
+        (run.out / rel).parent.mkdir(parents=True, exist_ok=True)
+        (run.out / rel).write_text("x")
+    run.wipe("sdev")                                     # the encoder stage's files stay
+    left = sorted(p.relative_to(run.out).as_posix() for p in run.out.rglob("*") if p.is_file())
+    assert left == ["results/sdev/exploratory_encoder/b.csv"]
+    run.wipe("encoder")
+    assert not [p for p in run.out.rglob("*") if p.is_file()]
+
+
+def test_missing_inputs_add_the_stages_that_write_them(fake_repo, tmp_path):
+    repo, work = fake_repo["repo"], tmp_path / "w"
+    assert run(repo, "--stages", "encoder-sob", "--workdir", str(work)) == 0
+    rep = report(work)
+    assert set(rep["stages_added"]) == {"sdev", "sob", "encoder"}               # freeze is not needed
+    assert rep["options"]["stages"] == ["sdev", "sob", "encoder", "encoder-sob"]
+    assert rep["summary"]["identical"] == rep["summary"]["compared"]
+    assert run(repo, "--stages", "encoder-sob", "--workdir", str(work)) == 0   # now the workdir holds them
+    rep = report(work)
+    assert rep["stages_added"] == {} and {s["stage"] for s in rep["steps"]} == {"encoder-sob"}
+    assert only_main(repo)
+
+
+def test_encoder_stages_need_torch(fake_repo, tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(R, "torch_available", lambda: False)
+    assert run(fake_repo["repo"], "--stages", "encoder", "--workdir", str(tmp_path / "w")) == 2
+    assert "uv run --locked --group encoder scripts/reproduce.py" in capsys.readouterr().err
+    assert run(fake_repo["repo"], "--stages", "freeze", "--workdir", str(tmp_path / "w")) == 0

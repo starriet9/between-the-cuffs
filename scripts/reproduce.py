@@ -4,47 +4,66 @@ the SHA-256 published in this repository (SPEC.md §8.3, §10).
 
 From a clone of the repository at main, with uv (https://docs.astral.sh/uv/) and git:
 
-    uv run --locked scripts/reproduce.py
+    uv run --locked --group encoder scripts/reproduce.py
 
-`uv run --locked` creates the environment pinned in `uv.lock` (Python 3.13 and the exact package
-versions of the original runs) and runs this script in it. The run needs network access to
-https://api.vitaldb.net (about 1.7 GB are downloaded and 0.4 GB of case archives are kept) and a
-POSIX system (Linux or macOS: it links folders with symbolic links).
+`uv run --locked --group encoder` creates the environment pinned in `uv.lock` (Python 3.13 and the exact
+package versions of the original runs, with the CPU build of torch for the exploratory encoder check) and
+runs this script in it. The run needs network access to https://api.vitaldb.net (about 1.7 GB are
+downloaded and 0.4 GB of case archives are kept) and to https://zenodo.org (the 23-MB encoder weights),
+and a POSIX system (Linux or macOS: it links folders with symbolic links).
 
 What it runs
 ------------
 Each stage runs the original scripts at the commit that wrote the published results, with the
 arguments of the original run, in a temporary git worktree of this repository (`git worktree add
---detach`). The commits are read from the committed MANIFEST.json files, and each tag is checked to
-point at the recorded commit.
+--detach`). The commits are read from the committed result files (MANIFEST.json meta, and the meta of
+build_check.json), and each tag is checked to point at the recorded commit.
 
-  sdev    tag feature-freeze, the commit in results/sdev/MANIFEST.json (SPEC §9 steps 2-5, §6.6-§6.8)
-            scripts/download.py --cohort sdev
-            scripts/build_instances.py --cohort sdev
-            scripts/build_windows.py --cohort sdev
-            scripts/build_features_wf.py --cohort sdev
-            scripts/pleth_coverage.py --cohort sdev        (descriptive; no published hash)
-            scripts/run_confirmatory.py --feature-tag feature-freeze --with-secondary
-  freeze  the commit in results/frozen/MANIFEST.json (SPEC §9 step 6)
-            scripts/run_frozen_scoring.py freeze
-  sob     tag models-frozen, the commit in results/sob/frozen_scoring/MANIFEST.json, every step with
-          BTC_FROZEN_SCORING=1 (SPEC §9 steps 7-8)
-            scripts/download.py --cohort sob
-            scripts/build_instances.py --cohort sob
-            scripts/build_windows.py --cohort sob
-            scripts/build_features_wf.py --cohort sob
-            scripts/run_frozen_scoring.py score --frozen-tag models-frozen
-            scripts/run_frozen_scoring.py after --frozen-tag models-frozen
-            scripts/run_frozen_scoring.py series --frozen-tag models-frozen
+  sdev         tag feature-freeze, the commit in results/sdev/MANIFEST.json (SPEC §9 steps 2-5, §6.6-§6.8)
+                 scripts/download.py --cohort sdev
+                 scripts/build_instances.py --cohort sdev
+                 scripts/build_windows.py --cohort sdev
+                 scripts/build_features_wf.py --cohort sdev
+                 scripts/pleth_coverage.py --cohort sdev        (descriptive; no published hash)
+                 scripts/run_confirmatory.py --feature-tag feature-freeze --with-secondary
+  freeze       the commit in results/frozen/MANIFEST.json (SPEC §9 step 6)
+                 scripts/run_frozen_scoring.py freeze
+  sob          tag models-frozen, the commit in results/sob/frozen_scoring/MANIFEST.json, every step with
+               BTC_FROZEN_SCORING=1 (SPEC §9 steps 7-8)
+                 scripts/download.py --cohort sob
+                 scripts/build_instances.py --cohort sob
+                 scripts/build_windows.py --cohort sob
+                 scripts/build_features_wf.py --cohort sob
+                 scripts/run_frozen_scoring.py score --frozen-tag models-frozen
+                 scripts/run_frozen_scoring.py after --frozen-tag models-frozen
+                 scripts/run_frozen_scoring.py series --frozen-tag models-frozen
+  encoder      the exploratory encoder check on S-dev (ENCODER_PLAN.md §1-§6, SPEC §6.8), at the commits
+               recorded in results/sdev/exploratory_encoder/MANIFEST.json (embeddings_built_at_commit,
+               encoder_features_built_at_commit, the run's commit) and in the meta of build_check.json
+                 scripts/download_encoder.py                    (the weights, from Zenodo)
+                 scripts/build_embeddings.py --jobs <workers recorded in the MANIFEST meta>
+                 scripts/build_features_enc.py
+                 scripts/run_encoder_check.py build-check
+                 scripts/run_encoder_check.py sdev --n-jobs 2
+  encoder-sob  the S-ob step of the encoder check (ENCODER_PLAN.md §7), at the commit in
+               results/sob/after_frozen_scoring/exploratory_encoder/MANIFEST.json, with BTC_FROZEN_SCORING=1
+                 scripts/run_encoder_sob.py --jobs <workers recorded in the MANIFEST meta> --n-jobs 2
 
-`freeze` and `sob` read the S-dev derived tables. When `sdev` is not among the stages and the data
-folder does not hold tables equal to the published ones (`inputs_sha256`), the S-dev part of `sdev`
-up to the tables runs first, at tag feature-freeze. Each stage reads the committed results of the
-earlier stages at its own commit (for example `freeze` reads the committed confirmatory summary), as
-the original runs did; each stage's own outputs are compared.
+The encoder steps keep the worker counts of the original runs, because their result files record them.
+`freeze`, `sob` and `encoder` read the S-dev derived tables: when the data folder does not hold tables equal
+to the published ones (`inputs_sha256`), the S-dev part of `sdev` up to the tables runs first, at tag
+feature-freeze. `encoder` reads the reproduced confirmatory forecasts (stage sdev) and `encoder-sob` the
+reproduced frozen-scoring forecasts and S-ob tables (stage sob) and the S-dev encoder tables and weights
+(stage encoder); a stage whose inputs are not already in `--workdir`, with the published SHA-256, is added
+to the run. These per-forecast files are not committed (they hold VitalDB cuff values); the reproduced copy
+is placed, git-ignored, in the worktree of the stage that reads it, where the original script checks its
+SHA-256 against the MANIFEST. Each stage reads the committed results of the earlier stages at its own
+commit (for example `freeze` reads the committed confirmatory summary), as the original runs did; each
+stage's own outputs are compared.
 
-After the stages, scripts/export_public_tables.py runs on the reproduced files at the commit recorded
-in each committed public_tables.json (`--results <reproduced files> --out <folder>`).
+After the stages, scripts/export_public_tables.py runs on the reproduced files at the commit recorded in
+each committed public_tables.json (`--results <reproduced files> --out <folder>`). The encoder stages write
+their public tables themselves (with that script's `export_stage`), as the original runs did.
 
 Data folder and worktrees
 -------------------------
@@ -56,13 +75,15 @@ GIT_CONFIG_KEY_n, GIT_CONFIG_VALUE_n; nothing is written to any git configuratio
   core.abbrev = 7, the length of the abbreviated commits in the recorded `git describe` strings
                       (git's own default length grows with the number of objects in a clone).
 Child processes also run with PYTHONUTF8=1 (the result files are written in the default encoding,
-UTF-8 in the original runs), without PYTHONPATH, and with BTC_FROZEN_SCORING=1 only in `sob`.
-The download script keeps its own limits (at most 4 parallel cases, retries with backoff).
+UTF-8 in the original runs), without PYTHONPATH, and with BTC_FROZEN_SCORING=1 only in `sob` and
+`encoder-sob`. The download script keeps its own limits (at most 4 parallel cases, retries with backoff).
 
 `--data DIR` reuses a data folder of an earlier run or download: the case archives `DIR/raw/<cohort>/`
-are linked and the cached case table and track list `DIR/raw/meta/` are copied into `<workdir>/data`,
-so the download script skips the cases already complete and requests only the others. DIR is only
-read, never written: the derived tables and logs are rebuilt in `<workdir>/data`.
+and the encoder weights `DIR/external/papagei/papagei_s.pt` are linked, and the cached case table and
+track list `DIR/raw/meta/` are copied into `<workdir>/data`, so the download scripts skip what is already
+complete (the weights are checked against their size and MD5 first). DIR is only read, never written: the
+derived tables and logs are rebuilt in `<workdir>/data`; encoder tables left there by an earlier run of
+the same `--workdir` are removed before they are rebuilt (the original scripts build them once).
 
 Nothing in the repository is changed. The worktrees, the data folder, the logs and the reproduced
 files are under `--workdir` (default `build/reproduce`, which git ignores); the worktrees are removed
@@ -74,7 +95,8 @@ Comparison
 Against the files committed at HEAD (the clone's main), never against the working tree:
   - every file listed in a committed results/**/MANIFEST.json, with its SHA-256, including the files that
     are not committed (per-forecast files, which hold VitalDB cuff values), and the MANIFEST.json itself;
-  - the derived tables, against `inputs_sha256` in the MANIFEST meta of the run that read them;
+  - the derived tables, against `inputs_sha256` in the MANIFEST meta of the run that read them; the S-dev
+    encoder embeddings and features and the weights, against the SHA-256 in the encoder MANIFEST meta;
   - the downloaded arrays, against the published checksum list (results/data_checksums.csv; for S-dev
     also results/sdev/data_checksums.csv), except the `meta_json` arrays, which hold the download time;
   - the committed files of a run that no MANIFEST lists: STATE.json byte for byte, the frozen-scoring
@@ -85,18 +107,19 @@ The table printed at the end shows the first 12 hex digits; `<workdir>/report.md
 hold the full values, the commands, the refs, the elapsed times, the platform, the BLAS and the version
 of every installed package. Exit status: 0 when every compared item is identical, 1 when any differs or
 is missing, 2 when the run could not start (for example a package version differs from the pins of a
-commit used; `--ignore-versions` runs anyway).
+commit used, `--ignore-versions` runs anyway; or torch is missing for the encoder stages).
 
 Result files hold no timestamps and every seed is fixed, so the same inputs, code and locked
 environment give the same bytes on the same platform. On another CPU or numerical library the last
 digits of floating-point results can differ, and the hashes with them (results/README.md); the
-per-patient tables then allow the numbers to be compared.
+per-patient tables then allow the numbers to be compared. The encoder results also record the torch
+build and settings of the embedding workers (`embedding_runtime` in their MANIFEST meta).
 
-The cesarean cases (S-ob) were scored once, in the run whose files are published (SPEC §9 step 7).
-The `sob` stage repeats that run in a worktree, outside the repository's results/, to check the
-published files; it is a check, not a new result. The descriptive S-ob pleth coverage
-(scripts/pleth_coverage.py --cohort sob) was run after the scoring at a later commit, publishes no hash,
-and is not run here.
+The cesarean cases (S-ob) were scored once, in the run whose files are published (SPEC §9 step 7), and
+the S-ob step of the encoder check ran once (ENCODER_PLAN.md §7). The `sob` and `encoder-sob` stages
+repeat those runs in worktrees, outside the repository's results/, to check the published files; they are
+checks, not new results. The descriptive S-ob pleth coverage (scripts/pleth_coverage.py --cohort sob) was
+run after the scoring at a later commit, publishes no hash, and is not run here.
 """
 from __future__ import annotations
 
@@ -104,6 +127,7 @@ import argparse
 import csv
 import dataclasses
 import hashlib
+import importlib.util
 import io
 import json
 import os
@@ -117,29 +141,49 @@ import tomllib
 from pathlib import Path, PurePosixPath
 
 REPO = Path(__file__).resolve().parents[1]
-STAGES = ("sdev", "freeze", "sob")
-STAGE_DIR = {"sdev": "results/sdev", "freeze": "results/frozen", "sob": "results/sob"}
+STAGES = ("sdev", "freeze", "sob", "encoder", "encoder-sob")
+ENCODER_STAGES = ("encoder", "encoder-sob")
+SOB_STAGES = ("sob", "encoder-sob")                 # run with BTC_FROZEN_SCORING=1
+SELF_EXPORTING = ("encoder", "encoder-sob")         # write their public tables themselves
+STAGE_DIR = {"sdev": "results/sdev", "freeze": "results/frozen", "sob": "results/sob",
+             "encoder": "results/sdev/exploratory_encoder",
+             "encoder-sob": "results/sob/after_frozen_scoring/exploratory_encoder"}
 COHORT_LABEL = {"sdev": "S-dev", "sob": "S-ob"}
 
 MANIFEST_SDEV = "results/sdev/MANIFEST.json"
 MANIFEST_FROZEN = "results/frozen/MANIFEST.json"
 MANIFEST_SCORE = "results/sob/frozen_scoring/MANIFEST.json"
 MANIFEST_AFTER = "results/sob/after_frozen_scoring/MANIFEST.json"
+MANIFEST_ENC = "results/sdev/exploratory_encoder/MANIFEST.json"
+MANIFEST_ENC_SOB = "results/sob/after_frozen_scoring/exploratory_encoder/MANIFEST.json"
+BUILD_CHECK = "results/sdev/exploratory_encoder/build_check.json"
 STATE = "results/sob/frozen_scoring/STATE.json"
 SCORING_LOG = "results/sob/frozen_scoring_log.jsonl"
+SDEV_PREDICTIONS = "results/sdev/confirmatory/predictions_primary.csv"     # read by `encoder`
+SOB_PREDICTIONS = "results/sob/frozen_scoring/predictions_primary.csv"     # read by `encoder-sob`
 CHECKSUMS = "results/data_checksums.csv"            # both cohorts, column `cohort`
 CHECKSUMS_SDEV = "results/sdev/data_checksums.csv"  # S-dev only, no `cohort` column
 PUBLIC_TABLES = "public_tables.json"
 NOT_COMPARED_ARRAY = "meta_json"                    # download metadata, includes the download time
 SITE_CASES = "data/derived/site/cases.json"         # written by `run_frozen_scoring.py series`
+WEIGHTS = "external/papagei/papagei_s.pt"           # in the data folder (scripts/download_encoder.py)
+ENC_EMBEDDINGS = "sdev_enc_window_embeddings.npy"
+ENC_FEATURES = "sdev_enc_features.parquet"
+ENC_TABLES = {c: tuple(f"{c}_enc_{n}" for n in ("window_embeddings.npy", "window_index.parquet",
+                                               "window_embeddings_log.json", "features.parquet",
+                                               "features_log.json")) for c in ("sdev", "sob")}
+ENC_N_JOBS = "2"                                    # --n-jobs of the original encoder runs (their default)
 NOTES = {  # committed files under results/ that no rule here reproduces, and why
     "results/README.md": "documentation",
     CHECKSUMS: "the published checksum list; the downloaded arrays are compared with it",
     CHECKSUMS_SDEV: "the published S-dev checksum list; the downloaded arrays are compared with it",
 }
-STAGE_ORDER = {"sdev": 0, "sdev-data": 0, "freeze": 1, "sob": 2}
+STAGE_ORDER = {"sdev": 0, "sdev-data": 0, "freeze": 1, "sob": 2, "encoder": 3, "encoder-sob": 4}
 GIT_SCRUB = ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR", "GIT_OBJECT_DIRECTORY",
              "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_NAMESPACE", "GIT_PREFIX")
+TORCH_MISSING = ("the encoder stages need torch, from the dependency group `encoder` of pyproject.toml: run "
+                 "`uv run --locked --group encoder scripts/reproduce.py`, or leave them out with "
+                 "--stages sdev,freeze,sob")
 SHORT = 12
 
 
@@ -233,8 +277,18 @@ class Published:
         b = self.read(path)
         return None if b is None else json.loads(b)
 
+    def meta(self, path: str) -> dict:
+        return (self.json(path) or {}).get("meta") or {}
+
     def manifests(self) -> list[str]:
         return sorted(p for p in self.tree if PurePosixPath(p).name == "MANIFEST.json")
+
+    def entry_hash(self, manifest: str, path: str) -> str | None:
+        """The SHA-256 that `manifest` lists for the published path `path`."""
+        for k, h in ((self.json(manifest) or {}).get("files") or {}).items():
+            if manifest_entry_path(manifest, k) == path:
+                return h
+        return None
 
 
 def manifest_entry_path(manifest: str, key: str) -> str:
@@ -245,11 +299,21 @@ def manifest_entry_path(manifest: str, key: str) -> str:
     return str((d.parent if PurePosixPath(key).parts[0] == d.name else d) / key)
 
 
+def under(path: str, folder: str) -> bool:
+    return path == folder or path.startswith(folder + "/")
+
+
 def stage_of(path: str) -> str | None:
-    for s, d in STAGE_DIR.items():
-        if path == d or path.startswith(d + "/"):
-            return s
-    return None
+    """The stage whose output folder holds `path` (the deepest folder: the encoder folders lie inside
+    results/sdev and results/sob)."""
+    hits = [s for s, d in STAGE_DIR.items() if under(path, d)]
+    return max(hits, key=lambda s: len(STAGE_DIR[s])) if hits else None
+
+
+def nested_dirs(stage: str) -> list[str]:
+    """Output folders of other stages inside this stage's folder (kept apart when files are copied)."""
+    d = STAGE_DIR[stage]
+    return [x for s, x in STAGE_DIR.items() if s != stage and x != d and under(x, d)]
 
 
 @dataclasses.dataclass
@@ -258,37 +322,53 @@ class Ref:
     commit: str
     tag: str | None
     source: str                     # where the commit is recorded
+    extra: dict = dataclasses.field(default_factory=dict)    # other commits of the stage, by step
 
     def label(self) -> str:
         return f"tag {self.tag} ({self.commit[:SHORT]})" if self.tag else f"commit {self.commit[:SHORT]}"
 
+    def commits(self) -> dict:
+        return {"run": self.commit, **self.extra}
+
 
 def stage_refs(git: Git, pub: Published, stages: list[str]) -> dict[str, Ref]:
-    """The commit of each stage, from the MANIFEST meta of its published run; a tag must point at it."""
+    """The commit of each stage, from the meta of its published result; a tag must point at it."""
     spec = {"sdev": (MANIFEST_SDEV, "feature_tag"), "freeze": (MANIFEST_FROZEN, None),
-            "sob": (MANIFEST_SCORE, "frozen_tag")}
+            "sob": (MANIFEST_SCORE, "frozen_tag"), "encoder": (MANIFEST_ENC, None),
+            "encoder-sob": (MANIFEST_ENC_SOB, None)}
+
+    def known(commit, where):
+        if git.commit_of(commit) != commit:
+            raise Refused(f"commit {commit} ({where}) is not in this clone; a shallow clone needs "
+                          "`git fetch --unshallow --tags`")
     refs = {}
     for s in stages:
         path, tag_key = spec[s]
-        m = pub.json(path)
-        if m is None:
+        if pub.json(path) is None:
             raise Refused(f"{path} is not committed at HEAD: there is no published {s} run to reproduce")
-        meta = m.get("meta") or {}
+        meta = pub.meta(path)
         commit, tag = meta.get("commit"), meta.get(tag_key) if tag_key else None
         if not commit:
             raise Refused(f"{path} records no commit")
-        if git.commit_of(commit) != commit:
-            raise Refused(f"commit {commit} ({path}) is not in this clone; a shallow clone needs "
-                          "`git fetch --unshallow --tags`")
+        known(commit, path)
         if tag_key:
             if not tag:
                 raise Refused(f"{path} records no {tag_key}")
             if git.commit_of(f"refs/tags/{tag}") != commit:
                 raise Refused(f"tag {tag} does not point at {commit}, the commit recorded in {path} "
                               "(fetch the tags with `git fetch --tags`)")
-        refs[s] = Ref(s, commit, tag, path)
+        extra = {}
+        if s == "encoder":
+            extra = {"embeddings": meta.get("embeddings_built_at_commit"),
+                     "features": meta.get("encoder_features_built_at_commit"),
+                     "build-check": pub.meta(BUILD_CHECK).get("commit")}
+            for step, c in extra.items():
+                if not c:
+                    raise Refused(f"no commit recorded for the encoder {step} step ({path}, {BUILD_CHECK})")
+                known(c, f"encoder {step}")
+        refs[s] = Ref(s, commit, tag, path, extra)
     if "sob" in refs:
-        after = (pub.json(MANIFEST_AFTER) or {}).get("meta", {}).get("commit")
+        after = pub.meta(MANIFEST_AFTER).get("commit")
         if after and after != refs["sob"].commit:
             raise Refused(f"{MANIFEST_AFTER} records commit {after}, {MANIFEST_SCORE} {refs['sob'].commit}")
     return refs
@@ -332,6 +412,10 @@ def installed() -> dict[str, str]:
     return out
 
 
+def torch_available() -> bool:
+    return importlib.util.find_spec("torch") is not None
+
+
 def python_ok(spec: str | None, version: str) -> bool:
     if not spec:
         return True
@@ -352,9 +436,18 @@ def version_problems(pyproject: bytes | None, have: dict[str, str], py: str) -> 
         got = have.get(name)
         if got is None and name in direct:
             probs.append(f"{name} not installed (pinned {v})")
-        elif got is not None and got != v:
+        # PEP 440: a pin without a local label (`==2.15.0`) is met by a local build (`2.15.0+cpu`)
+        elif got is not None and got != v and got.split("+", 1)[0] != v:
             probs.append(f"{name} {got} installed, {v} pinned")
     return probs
+
+
+def recorded_workers(meta: dict, source: str) -> str:
+    """The embedding worker count of an original encoder run (`embedding_runtime.workers` in its meta)."""
+    w = (meta.get("embedding_runtime") or {}).get("workers")
+    if not isinstance(w, int) or w < 1:
+        raise StepFailed(f"{source} records no embedding worker count (embedding_runtime.workers)")
+    return str(w)
 
 
 def platform_record() -> dict:
@@ -465,6 +558,8 @@ class Run:
         self.env = git_env(dict(os.environ), self.exclude)
         self.git = Git(repo, self.env)
         self.py = sys.executable
+        self.stages: list[str] = []
+        self.added: dict[str, str] = {}            # stage added to the run -> why
         self.worktrees: dict[str, Path] = {}
         self.steps: list[dict] = []
         self.times: dict[str, float] = {}
@@ -490,8 +585,11 @@ class Run:
         self.head_describe = g.out("describe", "--tags", "--always", "--dirty")
         self.head_branch = g.run("symbolic-ref", "--short", "-q", "HEAD", check=False).stdout.decode().strip() or None
         self.pub = Published(g, self.head)
-        self.refs = stage_refs(g, self.pub, stages)
         self._check_workdir()
+        self.stages, self.added = self.close_stages(stages)
+        if any(s in ENCODER_STAGES for s in self.stages) and not torch_available():
+            raise Refused(TORCH_MISSING)
+        self.refs = stage_refs(g, self.pub, self.stages)
         self.work.mkdir(parents=True, exist_ok=True)
         self._take_lock()
         self.exclude.parent.mkdir(parents=True, exist_ok=True)
@@ -560,11 +658,60 @@ class Run:
         if probs:
             lines = [f"  {label}: " + "; ".join(p) for label, p in probs.items()]
             msg = ("the environment differs from the pins of a commit used (pyproject.toml):\n" + "\n".join(lines) +
-                   "\nCreate the locked environment (`uv run --locked scripts/reproduce.py`), or pass "
-                   "--ignore-versions to run anyway (the hashes may then differ).")
+                   "\nCreate the locked environment (`uv run --locked --group encoder scripts/reproduce.py`), or "
+                   "pass --ignore-versions to run anyway (the hashes may then differ).")
             if not self.a.ignore_versions:
                 raise Refused(msg)
             print("warning: " + msg, file=sys.stderr)
+
+    # -- inputs a stage reads from another stage ----------------------------------------------
+    def _tables_ok(self, manifest: str, cohort: str) -> bool:
+        exp = self.pub.meta(manifest).get("inputs_sha256") or {}
+        return (bool(exp) and (self.data / "derived" / f"{cohort}_windows.parquet").is_file()
+                and all(sha256_file(self.data / "derived" / n) == h for n, h in exp.items()))
+
+    def _reproduced_ok(self, path: str, manifest: str) -> bool:
+        h = self.pub.entry_hash(manifest, path)
+        return h is not None and sha256_file(self.out / path) == h
+
+    def _encoder_tables_ok(self) -> bool:
+        """The S-dev encoder tables of an earlier run in this workdir, and the weights (here or in --data),
+        with the SHA-256 of the encoder MANIFEST meta."""
+        m, d, src = self.pub.meta(MANIFEST_ENC), self.data / "derived", self._data_src()
+        want = {d / ENC_EMBEDDINGS: m.get("embeddings_sha256"), d / ENC_FEATURES: m.get("encoder_features_sha256")}
+        weights = (m.get("weights") or {}).get("sha256")
+        if None in want.values() or weights is None or not all((d / n).is_file() for n in ENC_TABLES["sdev"]):
+            return False
+        if any(sha256_file(f) != h for f, h in want.items()):
+            return False
+        return weights in {sha256_file(self.data / WEIGHTS), sha256_file(src / WEIGHTS) if src else None}
+
+    def needs(self, stage: str) -> list[tuple[str, bool, str]]:
+        """(stage that writes it, already in the workdir with its published SHA-256, what) for every input
+        that `stage` reads from another stage's outputs (the S-dev derived tables aside: see
+        `ensure_sdev_tables`)."""
+        if stage == "encoder":
+            return [("sdev", self._reproduced_ok(SDEV_PREDICTIONS, MANIFEST_SDEV), SDEV_PREDICTIONS)]
+        if stage == "encoder-sob":
+            sob_ok = self._reproduced_ok(SOB_PREDICTIONS, MANIFEST_SCORE) and self._tables_ok(MANIFEST_SCORE, "sob")
+            return [("sob", sob_ok,
+                     f"{SOB_PREDICTIONS} and the S-ob derived tables"),
+                    ("encoder", self._encoder_tables_ok(), "the S-dev encoder tables and the weights")]
+        return []
+
+    def close_stages(self, stages: list[str]) -> tuple[list[str], dict[str, str]]:
+        """`stages` with every stage that writes an input they need and that is not in the workdir yet."""
+        have, added = set(stages), {}
+        changed = True
+        while changed:
+            changed = False
+            for s in [x for x in STAGES if x in have]:
+                for dep, ok, what in self.needs(s):
+                    if dep not in have and not ok:
+                        have.add(dep)
+                        added[dep] = f"stage {s} reads {what}, which this workdir does not hold"
+                        changed = True
+        return [x for x in STAGES if x in have], added
 
     # -- worktrees and steps ------------------------------------------------------------------
     def worktree(self, label: str, commit: str) -> Path:
@@ -612,13 +759,15 @@ class Run:
                 pass
         return x
 
-    def step(self, stage: str, ref: Ref, wt: Path, script: str, *args: str, sob: bool = False):
+    def step(self, stage: str, commit: str, tag: str | None, wt: Path, script: str, *args: str, sob: bool = False):
         argv = [self.py, f"scripts/{script}", *[str(x) for x in args]]
         self.n_step += 1
-        name = f"{self.n_step:02d}-{stage}-{script.removesuffix('.py')}{'-' + args[0] if args and not args[0].startswith('-') else ''}"
+        sub = f"-{args[0]}" if args and not args[0].startswith("-") else ""
+        name = f"{self.n_step:02d}-{stage}-{script.removesuffix('.py')}{sub}"
         log = self.logs / f"{name}.log"
         shown = " ".join(self._shown(x) for x in argv)
-        print(f"\n--> [{stage} @ {ref.label()}] {'BTC_FROZEN_SCORING=1 ' if sob else ''}{shown}", flush=True)
+        where = f"tag {tag} ({commit[:SHORT]})" if tag else f"commit {commit[:SHORT]}"
+        print(f"\n--> [{stage} @ {where}] {'BTC_FROZEN_SCORING=1 ' if sob else ''}{shown}", flush=True)
         t0 = time.time()
         with log.open("w", encoding="utf-8") as f, subprocess.Popen(
                 argv, cwd=wt, env=self.child_env(sob), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -628,34 +777,75 @@ class Run:
                 f.write(line)
             code = p.wait()
         sec = time.time() - t0
-        self.steps.append({"stage": stage, "commit": ref.commit, "tag": ref.tag, "argv": [self._shown(x) for x in argv],
+        self.steps.append({"stage": stage, "commit": commit, "tag": tag, "argv": [self._shown(x) for x in argv],
                            "env": {"BTC_FROZEN_SCORING": "1"} if sob else {}, "exit": code,
                            "seconds": round(sec, 1), "log": f"logs/{log.name}"})
         print(f"    (exit {code}, {sec:.1f} s)", flush=True)
         if code != 0:
             raise StepFailed(f"{shown} exited with {code} (log: {log.relative_to(self.work)})")
 
-    def collect(self, wt: Path, rel: str):
-        """Copy the files a stage wrote under `rel` in its worktree (untracked there) to <workdir>/out/rel."""
-        src, dst = wt / rel, self.out / rel
-        if dst.exists():
-            shutil.rmtree(dst)
+    def wipe(self, stage: str):
+        """Remove the reproduced files of `stage` from an earlier run (not those of a nested stage)."""
+        dst, keep = self.out / STAGE_DIR[stage], nested_dirs(stage)
+        if not dst.exists():
+            return
+        for f in sorted(dst.rglob("*"), reverse=True):          # a folder's files come before the folder
+            r = f.relative_to(self.out).as_posix()
+            if any(under(r, k) for k in keep):
+                continue
+            if f.is_dir() and not f.is_symlink():
+                if not any(f.iterdir()):
+                    f.rmdir()
+            else:
+                f.unlink()
+
+    def collect(self, wt: Path, stage: str):
+        """Copy the files the stage wrote in its worktree (untracked there) to <workdir>/out/, at their paths."""
+        rel, keep = STAGE_DIR[stage], nested_dirs(stage)
+        src = wt / rel
         if not src.exists():
             return
         tracked = set(self.git.out("ls-files", "--", rel, cwd=wt).splitlines())
         for f in sorted(src.rglob("*")):
             r = f.relative_to(wt).as_posix()
-            if f.is_file() and r not in tracked:
-                (dst / f.relative_to(src)).parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(f, dst / f.relative_to(src))
+            if f.is_file() and r not in tracked and not any(under(r, k) for k in keep):
+                (self.out / r).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(f, self.out / r)
+
+    def place(self, wt: Path, path: str, manifest: str):
+        """Put the reproduced, git-ignored file `path` (read by the stage at `wt`) into the worktree. The
+        original script checks it against the SHA-256 in `manifest`; a difference is reported here first."""
+        src = self.out / path
+        if not src.is_file():
+            raise StepFailed(f"{path} was not reproduced in this workdir")
+        if sha256_file(src) != self.pub.entry_hash(manifest, path):
+            print(f"warning: the reproduced {path} differs from its SHA-256 in {manifest}")
+        (wt / path).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, wt / path)
+        if self.git.status(wt):
+            raise Refused(f"{path} is not git-ignored at {self.git.out('rev-parse', 'HEAD', cwd=wt)[:SHORT]}")
 
     # -- data -----------------------------------------------------------------------------------
+    def _link(self, s: Path, d: Path) -> bool:
+        """Link `d` to the file `s` unless `d` is a file of this workdir (downloaded by an earlier run)."""
+        if d.is_symlink():
+            d.unlink()
+        elif d.exists():
+            return False
+        d.parent.mkdir(parents=True, exist_ok=True)
+        d.symlink_to(s.resolve())
+        return True
+
+    def _data_src(self) -> Path | None:
+        if self.a.data is None:
+            return None
+        src = Path(self.a.data).resolve()
+        return None if src == self.data.resolve() else src
+
     def link_cached(self, cohort: str):
         """--data DIR: copy DIR/raw/meta/{cases,trks}.csv if absent here, link DIR/raw/<cohort>/*.npz."""
-        if self.a.data is None:
-            return
-        src = Path(self.a.data).resolve()
-        if src == self.data.resolve():
+        src = self._data_src()
+        if src is None:
             return
         for name in ("cases.csv", "trks.csv"):
             s, d = src / "raw" / "meta" / name, self.data / "raw" / "meta" / name
@@ -663,16 +853,22 @@ class Run:
                 shutil.copy2(s, d)
         sdir, ddir = src / "raw" / cohort, self.data / "raw" / cohort
         ddir.mkdir(parents=True, exist_ok=True)
-        n = 0
-        for s in sorted(sdir.glob("*.npz")) if sdir.is_dir() else []:
-            d = ddir / s.name
-            if d.is_symlink():
-                d.unlink()
-            elif d.exists():
-                continue                       # downloaded by an earlier run of this workdir
-            d.symlink_to(s.resolve())
-            n += 1
+        n = sum(self._link(s, ddir / s.name) for s in (sorted(sdir.glob("*.npz")) if sdir.is_dir() else []))
         print(f"linked {n} {COHORT_LABEL[cohort]} case archives from --data (read only)")
+
+    def link_weights(self):
+        """--data DIR: link DIR/external/papagei/papagei_s.pt (scripts/download_encoder.py checks it)."""
+        src = self._data_src()
+        if src is not None and (src / WEIGHTS).is_file() and self._link(src / WEIGHTS, self.data / WEIGHTS):
+            print(f"linked the encoder weights from --data (read only): {WEIGHTS}")
+
+    def remove_encoder_tables(self, cohort: str):
+        """The original scripts build the encoder tables once and refuse to overwrite them."""
+        old = [n for n in ENC_TABLES[cohort] if (self.data / "derived" / n).exists()]
+        for n in old:
+            (self.data / "derived" / n).unlink()
+        if old:
+            print(f"removed the {COHORT_LABEL[cohort]} encoder tables of an earlier run of this workdir: {old}")
 
     def check_data(self, stage: str, cohort: str):
         label = COHORT_LABEL[cohort]
@@ -696,18 +892,20 @@ class Run:
         for k in (c["differ"] + c["missing"] + c["extra"])[:10]:
             print(f"    case {k[0]} array {k[1]}: published {exp.get(k)}, downloaded {got.get(k)}")
 
-    def check_tables(self, stage: str, manifest: str, cohort: str):
-        exp = ((self.pub.json(manifest) or {}).get("meta") or {}).get("inputs_sha256") or {}
-        for name, h in sorted(exp.items()):
-            got = sha256_file(self.data / "derived" / name)
-            self.rows.append(Row(stage, f"data/derived/{name}", h, got, note=f"inputs_sha256 in {manifest}"))
-        bad = [r.item for r in self.rows[-len(exp):] if not r.ok] if exp else []
-        print(f"derived {COHORT_LABEL[cohort]} tables: {len(exp) - len(bad)} of {len(exp)} equal to inputs_sha256 "
-              f"in {manifest}" + (f"; different: {bad}" if bad else ""))
+    def check_files(self, stage: str, expected: dict[str, str | None], source: str):
+        """Rows for files of the data folder against the SHA-256 recorded in `source`."""
+        rows = [Row(stage, f"data/{rel}", h, sha256_file(self.data / rel), note=source) for rel, h in expected.items()]
+        self.rows += rows
+        bad = [r.item for r in rows if not r.ok]
+        print(f"{len(rows) - len(bad)} of {len(rows)} files equal to the SHA-256 in {source}"
+              + (f"; different: {bad}" if bad else ""))
+
+    def check_tables(self, stage: str, manifest: str):
+        exp = self.pub.meta(manifest).get("inputs_sha256") or {}
+        self.check_files(stage, {f"derived/{n}": h for n, h in sorted(exp.items())}, f"inputs_sha256 in {manifest}")
 
     def sdev_tables_ok(self) -> bool:
-        exp = ((self.pub.json(MANIFEST_SDEV) or {}).get("meta") or {}).get("inputs_sha256") or {}
-        return bool(exp) and all(sha256_file(self.data / "derived" / n) == h for n, h in exp.items())
+        return self._tables_ok(MANIFEST_SDEV, "sdev")
 
     # -- stages -----------------------------------------------------------------------------------
     def sdev_data(self, stage: str, ref: Ref) -> Path:
@@ -715,29 +913,30 @@ class Run:
         self.sdev_state = "failed"
         wt = self.worktree(ref.tag or f"sdev-{ref.commit[:7]}", ref.commit)
         self.link_cached("sdev")
-        self.step(stage, ref, wt, "download.py", "--cohort", "sdev")
+        run = lambda *a: self.step(stage, ref.commit, ref.tag, wt, *a)
+        run("download.py", "--cohort", "sdev")
         self.check_data(stage, "sdev")
-        self.step(stage, ref, wt, "build_instances.py", "--cohort", "sdev")
-        self.step(stage, ref, wt, "build_windows.py", "--cohort", "sdev", *self.jobs("--jobs"))
-        self.step(stage, ref, wt, "build_features_wf.py", "--cohort", "sdev")
-        self.step(stage, ref, wt, "pleth_coverage.py", "--cohort", "sdev")
+        run("build_instances.py", "--cohort", "sdev")
+        run("build_windows.py", "--cohort", "sdev", *self.jobs("--jobs"))
+        run("build_features_wf.py", "--cohort", "sdev")
+        run("pleth_coverage.py", "--cohort", "sdev")
         self.sdev_state = "built"
-        self.check_tables(stage, MANIFEST_SDEV, "sdev")
+        self.check_tables(stage, MANIFEST_SDEV)
         return wt
 
     def jobs(self, flag: str) -> list[str]:
         return [] if self.a.jobs is None else [flag, str(self.a.jobs)]
 
     def ensure_sdev_tables(self, for_stage: str):
-        """`freeze` and `sob` read the S-dev derived tables: build them unless the data folder holds the
-        published ones."""
+        """`freeze`, `sob` and `encoder` read the S-dev derived tables: build them unless the data folder
+        holds the published ones."""
         if self.sdev_state == "built":
             return
         if self.sdev_state == "failed":
             raise StepFailed("the S-dev data build of this run failed; this stage needs its tables")
         if self.sdev_tables_ok():
             print(f"S-dev derived tables in <workdir>/data/derived equal the published ones (needed by {for_stage})")
-            self.check_tables(for_stage, MANIFEST_SDEV, "sdev")
+            self.check_tables(for_stage, MANIFEST_SDEV)
             self.sdev_state = "built"
             return
         sd = stage_refs(self.git, self.pub, ["sdev"])["sdev"]
@@ -750,68 +949,122 @@ class Run:
             print(f"== S-dev data build: {fmt_time(self.times['sdev-data'])}")
 
     def stage_sdev(self, ref: Ref):
+        self.wipe("sdev")
         wt = self.sdev_data("sdev", ref)
         try:
-            self.step("sdev", ref, wt, "run_confirmatory.py", "--feature-tag", ref.tag, "--with-secondary",
-                      *self.jobs("--n-jobs"))
+            self.step("sdev", ref.commit, ref.tag, wt, "run_confirmatory.py", "--feature-tag", ref.tag,
+                      "--with-secondary", *self.jobs("--n-jobs"))
         finally:
-            self.collect(wt, STAGE_DIR["sdev"])
+            self.collect(wt, "sdev")
 
     def stage_freeze(self, ref: Ref):
+        self.wipe("freeze")
         wt = self.worktree(f"freeze-{ref.commit[:7]}", ref.commit)
         try:
-            self.step("freeze", ref, wt, "run_frozen_scoring.py", "freeze", *self.jobs("--n-jobs"))
+            self.step("freeze", ref.commit, ref.tag, wt, "run_frozen_scoring.py", "freeze", *self.jobs("--n-jobs"))
         finally:
-            self.collect(wt, STAGE_DIR["freeze"])
+            self.collect(wt, "freeze")
 
     def stage_sob(self, ref: Ref):
+        self.wipe("sob")
         wt = self.worktree(ref.tag or f"sob-{ref.commit[:7]}", ref.commit)
-        tag = ref.tag
         site = self.data / "derived" / "site"           # written by `series`; an earlier run's copy must not count
         if site.exists():
             shutil.rmtree(site)
+        run = lambda *a: self.step("sob", ref.commit, ref.tag, wt, *a, sob=True)
         try:
             self.link_cached("sob")
-            self.step("sob", ref, wt, "download.py", "--cohort", "sob", sob=True)
+            run("download.py", "--cohort", "sob")
             self.check_data("sob", "sob")
-            self.step("sob", ref, wt, "build_instances.py", "--cohort", "sob", sob=True)
-            self.step("sob", ref, wt, "build_windows.py", "--cohort", "sob", *self.jobs("--jobs"), sob=True)
-            self.step("sob", ref, wt, "build_features_wf.py", "--cohort", "sob", sob=True)
-            self.check_tables("sob", MANIFEST_SCORE, "sob")
+            run("build_instances.py", "--cohort", "sob")
+            run("build_windows.py", "--cohort", "sob", *self.jobs("--jobs"))
+            run("build_features_wf.py", "--cohort", "sob")
+            self.check_tables("sob", MANIFEST_SCORE)
             for cmd in ("score", "after", "series"):
-                self.step("sob", ref, wt, "run_frozen_scoring.py", cmd, "--frozen-tag", tag, *self.jobs("--n-jobs"),
-                          sob=True)
+                run("run_frozen_scoring.py", cmd, "--frozen-tag", ref.tag, *self.jobs("--n-jobs"))
         finally:
-            self.collect(wt, STAGE_DIR["sob"])
+            self.collect(wt, "sob")
+
+    def stage_encoder(self, ref: Ref):
+        """ENCODER_PLAN.md §1-§6: weights, embeddings, features and build check at the commits recorded for
+        them, then the S-dev run at the run's commit (which reads build_check.json as committed there)."""
+        self.wipe("encoder")
+        m = self.pub.meta(MANIFEST_ENC)
+        c = ref.extra
+        wts = {}
+
+        def at(step_commit):
+            if step_commit not in wts:
+                wts[step_commit] = self.worktree(f"encoder-{step_commit[:7]}", step_commit)
+            return wts[step_commit]
+        run = lambda commit, *a: self.step("encoder", commit, None, at(commit), *a)
+        try:
+            self.remove_encoder_tables("sdev")
+            self.link_weights()
+            run(c["embeddings"], "download_encoder.py")
+            self.check_files("encoder", {WEIGHTS: (m.get("weights") or {}).get("sha256")},
+                             f"weights.sha256 in {MANIFEST_ENC}")
+            run(c["embeddings"], "build_embeddings.py", "--jobs", recorded_workers(m, MANIFEST_ENC))
+            run(c["features"], "build_features_enc.py")
+            self.check_files("encoder", {f"derived/{ENC_EMBEDDINGS}": m.get("embeddings_sha256")},
+                             f"embeddings_sha256 in {MANIFEST_ENC}")
+            self.check_files("encoder", {f"derived/{ENC_FEATURES}": m.get("encoder_features_sha256")},
+                             f"encoder_features_sha256 in {MANIFEST_ENC}")
+            run(c["build-check"], "run_encoder_check.py", "build-check")
+            self.place(at(ref.commit), SDEV_PREDICTIONS, MANIFEST_SDEV)
+            run(ref.commit, "run_encoder_check.py", "sdev", "--n-jobs", ENC_N_JOBS)
+        finally:
+            for wt in wts.values():
+                self.collect(wt, "encoder")
+
+    def stage_encoder_sob(self, ref: Ref):
+        """ENCODER_PLAN.md §7: S-ob embeddings, features, refit and scoring in one run of the original script."""
+        self.wipe("encoder-sob")
+        m = self.pub.meta(MANIFEST_ENC_SOB)
+        wt = self.worktree(f"encoder-sob-{ref.commit[:7]}", ref.commit)
+        try:
+            self.remove_encoder_tables("sob")
+            self.link_cached("sob")
+            self.link_weights()
+            self.place(wt, SOB_PREDICTIONS, MANIFEST_SCORE)
+            self.step("encoder-sob", ref.commit, None, wt, "run_encoder_sob.py",
+                      "--jobs", recorded_workers(m, MANIFEST_ENC_SOB), "--n-jobs", ENC_N_JOBS, sob=True)
+        finally:
+            self.collect(wt, "encoder-sob")
 
     def export(self, done: list[str]):
-        """scripts/export_public_tables.py at the commit of each committed public_tables.json."""
+        """scripts/export_public_tables.py at the commit of each committed public_tables.json (the stages that
+        write their tables themselves aside)."""
         groups: dict[str, list[str]] = {}
         self.export_dirs = {}
         for p in sorted(self.pub.tree):
-            if PurePosixPath(p).name != PUBLIC_TABLES or stage_of(p) not in done:
+            s = stage_of(p)
+            if PurePosixPath(p).name != PUBLIC_TABLES or s not in done or s in SELF_EXPORTING:
                 continue
-            c = ((self.pub.json(p) or {}).get("meta") or {}).get("commit")
+            c = self.pub.meta(p).get("commit")
             if c:
                 groups.setdefault(c, []).append(str(PurePosixPath(p).parent))
         for c, folders in groups.items():
-            ref = Ref("export", c, None, ", ".join(f + "/" + PUBLIC_TABLES for f in folders))
+            src = ", ".join(f + "/" + PUBLIC_TABLES for f in folders)
             if self.git.commit_of(c) != c:
-                self.failed[f"export at {c[:SHORT]}"] = f"commit {c} ({ref.source}) is not in this clone"
+                self.failed[f"export at {c[:SHORT]}"] = f"commit {c} ({src}) is not in this clone"
                 continue
             base = self.work / "export" / c[:SHORT]
             if base.exists():
                 shutil.rmtree(base)
             src_root, dst_root = base / "results", base / "tables"
             for s in sorted({stage_of(f) for f in folders}):
-                rel = STAGE_DIR[s]
-                if (self.out / rel).exists():
-                    shutil.copytree(self.out / rel, base / rel)
+                src_dir, keep = self.out / STAGE_DIR[s], nested_dirs(s)
+                for f in sorted(src_dir.rglob("*")) if src_dir.exists() else []:
+                    r = f.relative_to(self.out).as_posix()
+                    if f.is_file() and not any(under(r, k) for k in keep):
+                        (base / r).parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(f, base / r)
             if not src_root.exists():
                 continue
             try:
                 wt = self.worktree(f"export-{c[:7]}", c)
-                self.step("export", ref, wt, "export_public_tables.py", "--results", str(src_root), "--out",
+                self.step("export", c, None, wt, "export_public_tables.py", "--results", str(src_root), "--out",
                           str(dst_root))
             except (StepFailed, Refused) as e:
                 self.failed[f"export at {c[:SHORT]}"] = str(e)
@@ -863,13 +1116,13 @@ class Run:
             s = stage_of(p)
             if s not in done:
                 continue
-            d = self.export_dirs.get(folder)
+            d = self.out / folder if s in SELF_EXPORTING else self.export_dirs.get(folder)
+            how = "written by the stage" if s in SELF_EXPORTING else "scripts/export_public_tables.py"
             for n in names:
                 b = pub.read(f"{folder}/{n}")
                 if b is not None:
                     self.rows.append(Row(s, f"{folder}/{n}", sha256_bytes(b),
-                                         sha256_file(d / n) if d is not None else None,
-                                         note="scripts/export_public_tables.py"))
+                                         sha256_file(d / n) if d is not None else None, note=how))
         self.not_compared = {p: NOTES.get(p, "not reproduced by this script") for p in sorted(pub.tree - covered)}
 
     def record_check(self) -> list[Row]:
@@ -910,11 +1163,20 @@ def print_table(rows: list[Row]):
         print(f"  {r.stage:<{w}}  {r.word():<9}  {short(r.expected):<{SHORT}}  {short(r.got):<{SHORT}}  {r.item}{extra}")
 
 
+def ref_text(r: Ref) -> str:
+    extra = {k: c for k, c in r.extra.items() if c != r.commit}
+    by = {}
+    for k, c in extra.items():
+        by.setdefault(c, []).append(k)
+    return r.label() + "".join(f"; {', '.join(ks)} at commit {c[:SHORT]}" for c, ks in by.items())
+
+
 def write_report(run: Run, rows: list[Row], record: list[Row], summary: dict, plat: dict):
     rep = {
         "summary": summary,
         "main": {"commit": run.head, "describe": run.head_describe, "branch": run.head_branch},
         "refs": {s: dataclasses.asdict(r) for s, r in run.refs.items()},
+        "stages_added": run.added,
         "stages_failed": run.failed,
         "elapsed_seconds": {k: round(v, 1) for k, v in run.times.items()},
         "steps": run.steps,
@@ -931,13 +1193,16 @@ def write_report(run: Run, rows: list[Row], record: list[Row], summary: dict, pl
     (run.work / "report.json").write_text(json.dumps(rep, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     L = ["# Reproduction report", "",
          f"- main: `{run.head}` ({run.head_describe}{', branch ' + run.head_branch if run.head_branch else ''})",
-         *[f"- {s}: {r.label()}, recorded in `{r.source}`; full commit `{r.commit}`" for s, r in run.refs.items()],
+         *[f"- {s}: {ref_text(r)}, recorded in `{r.source}`; full commits: "
+           + ", ".join(f"{k} `{c}`" for k, c in r.commits().items()) for s, r in run.refs.items()],
+         *[f"- added: {s} ({why})" for s, why in run.added.items()],
          f"- result: {summary['identical']} of {summary['compared']} reproduced items identical"
          + (f"; failed: {', '.join(sorted(run.failed))}" if run.failed else ""),
          f"- elapsed: " + ", ".join(f"{k} {fmt_time(v)}" for k, v in run.times.items()),
          f"- Python {plat['python']}, {plat['platform']}, {plat['cpu_count']} CPUs; BLAS: "
          + ", ".join(f"{d.get('internal_api')} {d.get('version')}" for d in plat.get("threadpools") or []
-                     if isinstance(d, dict)),
+                     if isinstance(d, dict))
+         + (f"; torch {installed().get('torch')}" if installed().get("torch") else ""),
          "", "| stage | identical | expected | got | file | note |", "|---|---|---|---|---|---|"]
     for r in rows:
         L.append(f"| {r.stage} | {r.word()} | {r.expected or '-'} | {r.got or '-'} | `{r.item}` | {r.note} |")
@@ -947,7 +1212,7 @@ def write_report(run: Run, rows: list[Row], record: list[Row], summary: dict, pl
     if run.not_compared:
         L += ["", "Committed files under results/ that are not compared:"] + \
              [f"- `{p}`: {why}" for p, why in run.not_compared.items()]
-    L += ["", "Commands (in a worktree at the commit of their stage):"] + \
+    L += ["", "Commands (in a worktree at the commit given):"] + \
          [f"- {s['stage']} @ {s['tag'] or s['commit'][:SHORT]}: "
           f"`{('BTC_FROZEN_SCORING=1 ' if s['env'] else '') + ' '.join(s['argv'])}` (exit {s['exit']}, {s['seconds']} s)"
           for s in run.steps]
@@ -969,16 +1234,19 @@ def parse_stages(s: str) -> list[str]:
 def main(argv=None, repo: Path | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--stages", type=parse_stages, default=list(STAGES),
-                    help="comma-separated subset of sdev,freeze,sob, run in that order (default: all)")
+                    help=f"comma-separated subset of {','.join(STAGES)}, run in that order (default: all); a stage "
+                         "whose inputs are not in --workdir yet is added")
     ap.add_argument("--workdir", type=Path, default=None,
                     help="worktrees, data folder, logs, reproduced files and report (default: build/reproduce)")
     ap.add_argument("--data", type=Path, default=None,
-                    help="an existing data folder (holding raw/<cohort>/*.npz and raw/meta/) whose case archives "
-                         "and case table are reused, read only; cases already complete are not downloaded")
+                    help="an existing data folder (holding raw/<cohort>/*.npz, raw/meta/ and, for the encoder "
+                         "stages, external/papagei/papagei_s.pt) whose files are reused, read only; what is "
+                         "already complete is not downloaded")
     ap.add_argument("--keep", action="store_true", help="keep the worktrees (until the next run with this --workdir)")
     ap.add_argument("--jobs", type=int, default=None,
                     help="parallel jobs, passed as --n-jobs to the model scripts and --jobs to build_windows.py "
-                         "(default: their own defaults, as in the original runs; the results do not depend on it)")
+                         "(default: their own defaults, as in the original runs; the results do not depend on it); "
+                         "not passed to the encoder steps, whose results record their worker counts")
     ap.add_argument("--ignore-versions", action="store_true",
                     help="run even if installed package versions differ from the pins of a commit used")
     a = ap.parse_args(argv)
@@ -991,20 +1259,22 @@ def main(argv=None, repo: Path | None = None) -> int:
             pass
 
     run = Run(a, (repo or REPO).resolve())
-    run.stages = a.stages
     t_all = time.time()
     try:
         run.prepare(a.stages)
-        commits = {r.label(): r.commit for r in run.refs.values()}
+        commits = {}
+        for s, r in run.refs.items():
+            for step, c in r.commits().items():
+                commits.setdefault(c, f"{s} ({step})")
         for p in sorted(run.pub.tree):
-            if PurePosixPath(p).name == PUBLIC_TABLES and stage_of(p) in a.stages:
-                c = ((run.pub.json(p) or {}).get("meta") or {}).get("commit")
+            if PurePosixPath(p).name == PUBLIC_TABLES and stage_of(p) in run.stages:
+                c = run.pub.meta(p).get("commit")
                 if c:
-                    commits[f"export {c[:SHORT]}"] = c
-        if any(s != "sdev" for s in a.stages):
+                    commits.setdefault(c, f"export {c[:SHORT]}")
+        if any(s != "sdev" for s in run.stages):
             sd = stage_refs(run.git, run.pub, ["sdev"])["sdev"]
-            commits.setdefault(sd.label(), sd.commit)
-        run.check_versions(commits)
+            commits.setdefault(sd.commit, "S-dev data build")
+        run.check_versions({label: c for c, label in commits.items()})
     except Refused as e:
         print(f"refused: {e}", file=sys.stderr)
         if run._lock is not None:
@@ -1013,23 +1283,31 @@ def main(argv=None, repo: Path | None = None) -> int:
 
     plat = platform_record()
     print(f"main: {run.head} ({run.head_describe})")
-    print("stages: " + ", ".join(f"{s} at {r.label()}" for s, r in run.refs.items()))
+    print("stages: " + ", ".join(f"{s} at {ref_text(r)}" for s, r in run.refs.items()))
+    for s, why in run.added.items():
+        print(f"added stage {s}: {why}")
     print(f"workdir: {run.work}")
     print(f"Python {plat['python']} on {plat['platform']}, {plat['cpu_count']} CPUs")
     record = run.record_check()
     done = []
+    runner = {"sdev": run.stage_sdev, "freeze": run.stage_freeze, "sob": run.stage_sob,
+              "encoder": run.stage_encoder, "encoder-sob": run.stage_encoder_sob}
     try:
-        for s in a.stages:
+        for s in run.stages:
             ref = run.refs[s]
-            print(f"\n== Stage {s}, at {ref.label()}")
-            if s == "sob":
-                print("   (repeats the published frozen scoring in a worktree to check its files; not a new result)")
+            print(f"\n== Stage {s}, at {ref_text(ref)}")
+            if s in SOB_STAGES:
+                print("   (repeats a published run on the cesarean cases in a worktree to check its files; "
+                      "not a new result)")
             t0 = time.time()
             try:
+                for dep, _, what in run.needs(s):
+                    if dep in run.failed:
+                        raise StepFailed(f"stage {dep} failed; this stage reads {what}")
                 if s != "sdev":
                     run.ensure_sdev_tables(s)        # timed on its own, as sdev-data
                     t0 = time.time()
-                {"sdev": run.stage_sdev, "freeze": run.stage_freeze, "sob": run.stage_sob}[s](ref)
+                runner[s](ref)
             except (StepFailed, Refused) as e:
                 run.failed[s] = str(e)
                 print(f"stage {s} FAILED: {e}", file=sys.stderr)

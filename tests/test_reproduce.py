@@ -8,8 +8,9 @@ only there), and write outputs that record the git state, so a run at another co
 gives other bytes. The repository's history mirrors the real one: the "original" runs are made in the
 main work tree at the same points (S-dev run at tag feature-freeze, public tables exported at a later
 commit, freeze at the next commit, S-ob at tag models-frozen, then the encoder embeddings, features and
-build check at one commit, the encoder S-dev run at the commit that adds build_check.json, and the S-ob
-encoder step at a later commit) and their outputs committed.
+build check at one commit, the encoder S-dev run at the commit that adds build_check.json, the S-ob
+encoder step at a later commit, then the exploratory lead-lag run at the commit after its plan and the
+detection-limit run at the commit that adds the lead-lag result) and their outputs committed.
 """
 import hashlib
 import importlib.util
@@ -324,6 +325,29 @@ def encoder_sob(args):
     self_export(ENC_SOB, st)
 
 
+EXPLORE = {"lead-lag": "exploratory_lead_lag", "detection-limit": "exploratory_detection_limit"}
+
+
+def exploratory(args):
+    cmd, st = args[0], state()
+    tree_ok(st, False)
+    if ENV in os.environ:
+        sys.exit(f"refused: {ENV} is set; the exploratory analyses never read S-ob data")
+    if not committed("EXPLORATORY_PLAN.md"):
+        sys.exit("refused: EXPLORATORY_PLAN.md is not committed at HEAD")
+    conf = json.loads((RESULTS / "sdev" / "confirmatory" / "summary.json").read_text())
+    if conf["meta"]["inputs_sha256"] != inputs("sdev"):
+        sys.exit("refused: the S-dev tables differ from the inputs of the confirmatory run")
+    out = RESULTS / "sdev" / EXPLORE[cmd]
+    if out.exists():
+        sys.exit("refused: the output folder exists; the first complete run is the result")
+    meta = {"commit": st["commit"], "describe": st["describe"], "status": st["status"], "inputs_sha256": inputs("sdev"),
+            "plan_sha256": sha(ROOT / "EXPLORATORY_PLAN.md")}
+    w = Writer(out, meta)
+    w.write("summary.json", json.dumps({"meta": meta, "command": cmd, "n": conf["n"]}))
+    w.manifest("MANIFEST.json")
+
+
 def export(args):
     st, res = state(), Path(opt(args, "--results"))
     out = Path(opt(args, "--out") or res)
@@ -350,7 +374,8 @@ def main(script, args):
      "build_embeddings": lambda: embeddings(args),
      "build_features_enc": features_enc,
      "run_encoder_check": lambda: encoder_check(args),
-     "run_encoder_sob": lambda: encoder_sob(args)}[script]()
+     "run_encoder_sob": lambda: encoder_sob(args),
+     "run_exploratory": lambda: exploratory(args)}[script]()
     return 0
 '''
 
@@ -358,7 +383,7 @@ SCRIPT = ("import sys\nfrom pathlib import Path\nsys.path.insert(0, str(Path(__f
           "import fakepipe\nsys.exit(fakepipe.main({name!r}, sys.argv[1:]))\n")
 SCRIPTS = ("download", "build_instances", "build_windows", "build_features_wf", "pleth_coverage", "run_confirmatory",
            "run_frozen_scoring", "export_public_tables", "download_encoder", "build_embeddings", "build_features_enc",
-           "run_encoder_check", "run_encoder_sob")
+           "run_encoder_check", "run_encoder_sob", "run_exploratory")
 
 
 def git(repo, *args, env=None):
@@ -442,10 +467,19 @@ def fake_repo(tmp_path_factory):
     (repo / "NOTES").write_text("encoder code, S-ob step\n")
     enc_sob = commit(repo, "encoder S-ob code", "NOTES")
     py(repo, "run_encoder_sob", "--jobs", "2", "--n-jobs", "2", sob=True)
-    head = commit(repo, "encoder S-ob result")
+    commit(repo, "encoder S-ob result")
+    (repo / "EXPLORATORY_PLAN.md").write_text("exploratory plan\n")
+    commit(repo, "exploratory plan", "EXPLORATORY_PLAN.md")
+    (repo / "NOTES").write_text("exploratory code\n")
+    explore = commit(repo, "exploratory code", "NOTES")
+    py(repo, "run_exploratory", "lead-lag")
+    explore_dl = commit(repo, "lead-lag result")
+    py(repo, "run_exploratory", "detection-limit")
+    head = commit(repo, "detection-limit result")
     assert git(repo, "status", "--porcelain") == ""
     return {"repo": repo, "feature_freeze": ff, "export_sdev": export_sdev, "freeze": freeze, "models_frozen": mf,
-            "export_sob": export_sob, "enc_build": enc_build, "enc_run": enc_run, "enc_sob": enc_sob, "head": head}
+            "export_sob": export_sob, "enc_build": enc_build, "enc_run": enc_run, "enc_sob": enc_sob,
+            "explore": explore, "explore_dl": explore_dl, "head": head}
 
 
 def run(repo, *args):
@@ -479,7 +513,8 @@ def test_full_run_is_identical_and_leaves_the_repository_unchanged(fake_repo, mo
     assert rep["main"]["commit"] == fake_repo["head"]
     assert {s: r["commit"] for s, r in rep["refs"].items()} == {
         "sdev": fake_repo["feature_freeze"], "freeze": fake_repo["freeze"], "sob": fake_repo["models_frozen"],
-        "encoder": fake_repo["enc_run"], "encoder-sob": fake_repo["enc_sob"]}
+        "encoder": fake_repo["enc_run"], "encoder-sob": fake_repo["enc_sob"], "lead-lag": fake_repo["explore"],
+        "detection-limit": fake_repo["explore_dl"]}
     assert rep["refs"]["encoder"]["extra"] == {k: fake_repo["enc_build"] for k in ("embeddings", "features", "build-check")}
     assert rep["stages_added"] == {}
     items = {r["item"]: r for r in rep["rows"]}
@@ -497,8 +532,12 @@ def test_full_run_is_identical_and_leaves_the_repository_unchanged(fake_repo, mo
               "results/sob/after_frozen_scoring/exploratory_encoder/MANIFEST.json",
               "results/sob/after_frozen_scoring/exploratory_encoder/per_patient_primary_wide.csv",
               "data/derived/sdev_enc_window_embeddings.npy", "data/derived/sdev_enc_features.parquet",
-              "data/external/papagei/papagei_s.pt"):
+              "data/external/papagei/papagei_s.pt", "results/sdev/exploratory_lead_lag/MANIFEST.json",
+              "results/sdev/exploratory_lead_lag/summary.json", "results/sdev/exploratory_detection_limit/MANIFEST.json",
+              "results/sdev/exploratory_detection_limit/summary.json"):
         assert items[p]["identical"] == "yes", p
+    assert items["results/sdev/exploratory_lead_lag/summary.json"]["stage"] == "lead-lag"
+    assert items["results/sdev/exploratory_detection_limit/summary.json"]["stage"] == "detection-limit"
     assert items["results/sdev/exploratory_encoder/public_tables.json"]["stage"] == "encoder"
     assert items["results/sdev/exploratory_encoder/public_tables.json"]["note"] == "written by the stage"
     data = [r for r in rep["rows"] if r["kind"] == "data"]
@@ -513,6 +552,9 @@ def test_full_run_is_identical_and_leaves_the_repository_unchanged(fake_repo, mo
     assert by[("encoder", "scripts/build_embeddings.py --jobs")]["argv"][3] == "3"     # recorded worker count
     assert by[("encoder-sob", "scripts/run_encoder_sob.py --jobs")]["commit"] == fake_repo["enc_sob"]
     assert by[("encoder-sob", "scripts/run_encoder_sob.py --jobs")]["argv"][2:] == ["--jobs", "2", "--n-jobs", "2"]
+    assert by[("lead-lag", "scripts/run_exploratory.py lead-lag")]["commit"] == fake_repo["explore"]
+    assert by[("detection-limit", "scripts/run_exploratory.py detection-limit")]["commit"] == fake_repo["explore_dl"]
+    assert by[("detection-limit", "scripts/run_exploratory.py detection-limit")]["argv"][2:] == ["detection-limit"]
     assert all((s["env"] == {"BTC_FROZEN_SCORING": "1"}) == (s["stage"] in ("sob", "encoder-sob")) for s in rep["steps"])
     exports = sorted(s["commit"] for s in rep["steps"] if s["stage"] == "export")
     assert exports == sorted([fake_repo["export_sdev"], fake_repo["export_sob"]])
@@ -687,7 +729,7 @@ def test_the_exclude_hides_only_the_linked_data_folder(tmp_path):
 
 
 def test_parse_stages():
-    assert R.parse_stages("all") == ["sdev", "freeze", "sob", "encoder", "encoder-sob"]
+    assert R.parse_stages("all") == ["sdev", "freeze", "sob", "encoder", "encoder-sob", "lead-lag", "detection-limit"]
     assert R.parse_stages("encoder,sob,sdev") == ["sdev", "sob", "encoder"]      # always in the order of the runs
     with pytest.raises(Exception):
         R.parse_stages("sdev,ob")
@@ -698,7 +740,10 @@ def test_nested_output_folders(tmp_path):
     assert R.stage_of("results/sdev/confirmatory/summary.json") == "sdev"
     assert R.stage_of("results/sob/after_frozen_scoring/exploratory_encoder/x") == "encoder-sob"
     assert R.stage_of("results/sob/after_frozen_scoring/MANIFEST.json") == "sob"
-    assert R.nested_dirs("sdev") == ["results/sdev/exploratory_encoder"] and R.nested_dirs("encoder") == []
+    assert R.nested_dirs("sdev") == ["results/sdev/exploratory_encoder", "results/sdev/exploratory_lead_lag",
+                                     "results/sdev/exploratory_detection_limit"] and R.nested_dirs("encoder") == []
+    assert R.stage_of("results/sdev/exploratory_lead_lag/MANIFEST.json") == "lead-lag"
+    assert R.stage_of("results/sdev/exploratory_detection_limit/summary.json") == "detection-limit"
     import argparse
     run = R.Run(argparse.Namespace(workdir=tmp_path, data=None, keep=False, jobs=None, ignore_versions=False), ROOT)
     for rel in ("results/sdev/confirmatory/a.csv", "results/sdev/MANIFEST.json", "results/sdev/exploratory_encoder/b.csv"):

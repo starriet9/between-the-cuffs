@@ -70,6 +70,9 @@ Built after `ENCODER_PLAN.md` was committed, from a clean work tree, with the ne
 - `sdev_enc_run_log.jsonl`: every attempt of `scripts/run_encoder_check.py` (a log, with times).
 - S-ob, after the frozen scoring (ENCODER_PLAN.md §7; `scripts/run_encoder_sob.py`, written after the S-dev encoder result; BTC_FROZEN_SCORING=1 for that run only): `sob_enc_window_embeddings.npy`, `sob_enc_window_index.parquet` and `sob_enc_window_embeddings_log.json` as above, for the usable windows of the analysed S-ob cases and their P1 donors; `sob_enc_features.parquet` and `sob_enc_features_log.json` as above, for the analysed cases' primary-window issue points; `sob_enc_run_log.jsonl`, every attempt.
 
+## 4e. Exploratory lead-lag and detection-limit analyses (`EXPLORATORY_PLAN.md`; S-dev only)
+`scripts/run_exploratory.py` (`btc/models/exploratory.py`) reads the S-dev tables above and writes no derived table. `sdev_exploratory_run_log.jsonl`: every attempt of its two commands (a log, with times).
+
 ## 5. Rules for every producer
 - Cohorts. Every builder takes `--cohort sdev|sob` and writes `<cohort>_` outputs. S-ob signals are read or requested only at the frozen scoring (§9 step 7): `btc.io` and `scripts/download.py` refuse S-ob unless `BTC_FROZEN_SCORING=1` is set, and the variable is set only from the frozen scoring on: the scoring run and the S-ob exports that follow it (in the tests, only with fake data). S-dev-specific checks (case counts, the two §2.3 cases) run for S-dev only.
 - Provenance (§10). Every parquet output carries key `btc` in its schema metadata, and every json log a `git` entry: commit, `describe`, state (clean, dirty or unknown; untracked files count as dirty), the porcelain status and `allow_dirty`. A builder refuses a dirty or unknown state unless `--allow-dirty` is given (`btc.provenance`).

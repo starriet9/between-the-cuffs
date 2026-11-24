@@ -1,0 +1,39 @@
+{
+ "meta": {
+  "commit": "3232c9af96b67d98972dfdc2eec4fff728221e97",
+  "describe": "models-frozen-22-g3232c9a",
+  "state": "clean",
+  "dirty": false,
+  "status": [],
+  "tags_at_head": [],
+  "data": "VitalDB derived tables (derived/sdev_*.parquet)",
+  "stage": "exploratory lead-lag (EXPLORATORY_PLAN.md)",
+  "label": "exploratory, computed after the registered results were known (EXPLORATORY_PLAN.md)",
+  "inputs_sha256": {
+   "sdev_cases.parquet": "b98f861e3a6bbefe7e958ae713332cd40dfaeb70eaeedb0e47f4f55535598e56",
+   "sdev_readings.parquet": "095d1b829680d6811d07bd700c7d896da3b701000a0654aa3493e87fc8edd857",
+   "sdev_instances.parquet": "c07533a28aa431a2a701cb9fe8b3072b829a8e8cdc67bae3d59d03c73247f4cf",
+   "sdev_features_hr.parquet": "088938443d45c2032d89127c18b518ffdc1f2ded4b703bbff52aaa32ae4d0990",
+   "sdev_features_wf.parquet": "ed9acd2260e93820ba90c19b08911952317c845e303c34e1f0f371c4136ba835"
+  },
+  "plan": {
+   "file": "EXPLORATORY_PLAN.md",
+   "sha256": "8fdb7ff5780e562bffaa9f5a282d2f5b83b26724ef7a7e9fd7ee88a0b063b530",
+   "last_commit": "35d4e17b6083043afe805130bc07ab68baa5d0df"
+  },
+  "confirmatory_summary_sha256": "fa87b9b8e9e7d4a12eb91b6859ebfa8b6690dc4f9059c68a0963d740a614f6b9",
+  "software": {
+   "python": "3.13.15",
+   "numpy": "2.5.5",
+   "pandas": "3.1.1",
+   "scikit-learn": "1.9.1",
+   "scipy": "1.18.1"
+  }
+ },
+ "files": {
+  "change_identity.csv": "d75e1b4f5713711066aff891af51d794d1caa8163e5a39fc764091fa7dd26229",
+  "lead_lag.csv": "9df40ae9ec73b5276e9af3f7b28ca757cbe36588304e8cb61b5c675c8a07843a",
+  "summary.json": "9014fb48c59070fe55b2f012229518c25225f8f4c7c7e46876fd48566fb72491",
+  "summary.md": "42feed21fa2c7a79f9df617033f98f3a5272df1487b1cffe7d2b9a15e618a472"
+ }
+}

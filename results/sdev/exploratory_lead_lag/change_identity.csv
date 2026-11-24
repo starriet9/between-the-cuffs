@@ -1,0 +1,12 @@
+# {"commit": "3232c9af96b67d98972dfdc2eec4fff728221e97", "describe": "models-frozen-22-g3232c9a", "data": "VitalDB derived tables (derived/sdev_*.parquet)", "stage": "exploratory lead-lag (EXPLORATORY_PLAN.md)"}  (read with skiprows=1)
+feature,variant,change_column,level_column,n_rows,n_change_finite,n_level_difference_finite,n_both,max_abs_difference,n_level_difference_without_change
+hr_level,real,hr_change,hr_level,1421,1341,1149,1149,0.0,0
+hr_level,p1,hr_change,hr_level,1421,1314,1123,1123,0.0,0
+pat,real,wf_pat_chg,wf_pat_lvl,1421,1358,1157,1157,0.0,0
+pat,p1,wf_pat_chg,wf_pat_lvl,1421,1362,1164,1164,0.0,0
+rise,real,wf_rise_chg,wf_rise_lvl,1421,1367,1165,1165,0.0,0
+rise,p1,wf_rise_chg,wf_rise_lvl,1421,1379,1178,1178,0.0,0
+width,real,wf_width_chg,wf_width_lvl,1421,1367,1165,1165,0.0,0
+width,p1,wf_width_chg,wf_width_lvl,1421,1379,1178,1178,0.0,0
+bav,real,wf_bav_chg,wf_bav_lvl,1421,1367,1165,1165,1.1102230246251565e-16,0
+bav,p1,wf_bav_chg,wf_bav_lvl,1421,1379,1178,1178,1.1102230246251565e-16,0

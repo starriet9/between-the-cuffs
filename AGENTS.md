@@ -15,17 +15,18 @@ A pre-registered test of one question (`SPEC.md` §0, `PREREG.md` §1): after sp
 | `SPEC.md` | Design specification, version 1.5; part of the registration. |
 | `PREREG.md` | Pre-registration, version 1.5; part of the registration. |
 | `ENCODER_PLAN.md` | Plan of the exploratory pretrained-encoder check (`SPEC.md` §6.8), committed before any encoder output was computed. |
+| `EXPLORATORY_PLAN.md` | Plan of the exploratory lead–lag analysis (`SPEC.md` §6.8) and the post hoc detection-limit analysis, committed before either was run. |
 | `AGENTS.md` | This file. |
 | `results/` | Result files of every run, with a `MANIFEST.json` of SHA-256 per run; file map in `results/README.md`. |
-| `btc/` | Analysis code: signals and features (`btc/*.py`, tables in `btc/SCHEMA.md`), models and scoring (`btc/models/`), README and web page (`btc/site/`); for the exploratory encoder check, `btc/encoder.py`, `btc/models/encoder.py`, `btc/models/encoder_sob.py` and the vendored model class with its licence in `btc/third_party/`. |
-| `scripts/` | Command-line steps: download, table builders, `run_confirmatory.py`, `run_frozen_scoring.py`, `export_public_tables.py`, `build_site.py`, the encoder-check scripts, `reproduce.py`, `verify.py`. |
+| `btc/` | Analysis code: signals and features (`btc/*.py`, tables in `btc/SCHEMA.md`), models and scoring (`btc/models/`), README and web page (`btc/site/`); for the exploratory encoder check, `btc/encoder.py`, `btc/models/encoder.py`, `btc/models/encoder_sob.py` and the vendored model class with its licence in `btc/third_party/`; for the lead–lag and detection-limit analyses, `btc/models/exploratory.py`. |
+| `scripts/` | Command-line steps: download, table builders, `run_confirmatory.py`, `run_frozen_scoring.py`, `export_public_tables.py`, `build_site.py`, the encoder-check scripts, `run_exploratory.py`, `reproduce.py`, `verify.py`. |
 | `tests/` | pytest suite: synthetic data and the committed tables; no network. |
 | `docs/` | Generated web page (`docs/index.html` and pre-rendered images), written by `scripts/build_site.py`. |
 | `data/` | Not in git (`.gitignore`): VitalDB tracks and derived tables, downloaded and built at run time. |
 | `pyproject.toml`, `uv.lock`, `.python-version` | Pinned environment (`SPEC.md` §10). The `encoder` dependency group (torch, CPU build) is used by the encoder check only. |
 | `LICENSE` | MIT licence of the code. |
 
-Main result folders: `results/sdev/confirmatory/` (confirmatory S-dev run, tag `feature-freeze`), `results/sdev/secondary/` (S-dev secondary analyses and gradient-boosting check, same tag), `results/frozen/` (models refitted on all S-dev cases), `results/sob/frozen_scoring/` (the one cesarean scoring, tag `models-frozen`), `results/sob/after_frozen_scoring/` (cesarean analyses computed after it), `results/sdev/exploratory_encoder/` and `results/sob/after_frozen_scoring/exploratory_encoder/` (exploratory encoder check, `ENCODER_PLAN.md`).
+Main result folders: `results/sdev/confirmatory/` (confirmatory S-dev run, tag `feature-freeze`), `results/sdev/secondary/` (S-dev secondary analyses and gradient-boosting check, same tag), `results/frozen/` (models refitted on all S-dev cases), `results/sob/frozen_scoring/` (the one cesarean scoring, tag `models-frozen`), `results/sob/after_frozen_scoring/` (cesarean analyses computed after it), `results/sdev/exploratory_encoder/` and `results/sob/after_frozen_scoring/exploratory_encoder/` (exploratory encoder check, `ENCODER_PLAN.md`), `results/sdev/exploratory_lead_lag/` and `results/sdev/exploratory_detection_limit/` (`EXPLORATORY_PLAN.md`).
 
 ## Claims and where their evidence is
 
@@ -128,3 +129,7 @@ print(contrast(bs, e["rmse_M4"], e["rmse_M2"], "M4", "M2"))   # = "M4 vs M2" in 
 ## Exploratory encoder check
 
 Plan: `ENCODER_PLAN.md`, committed and pushed (commit `29db44b`) before any encoder output was computed; every encoder result file records the plan's SHA-256 and that commit (`meta.plan`, `meta.plan_public`). Results: `results/sdev/exploratory_encoder/` (build check at `a07e0d2`, S-dev run at `d66ad63`) and `results/sob/after_frozen_scoring/exploratory_encoder/` (cesarean step, run once at `dda1d6d`, after the frozen scoring); `REPORT.md`, "Exploratory pretrained-encoder check", lists them with the disclosures and departures. The contrasts are recomputed from the committed per-patient tables by verify 4. The embeddings, the build check and the per-forecast files need a rerun (stages `encoder` and `encoder-sob` of `scripts/reproduce.py`).
+
+## Exploratory lead–lag and detection limit
+
+Plan: `EXPLORATORY_PLAN.md`, committed (`35d4e17`) before either analysis was run. The commit was local and was pushed together with the results, so the order rests on the author's commit dates; each result file records the plan's SHA-256 (`meta.plan`). Results: `results/sdev/exploratory_lead_lag/` (run at `3232c9a`) and `results/sdev/exploratory_detection_limit/` (run at `236df0c`), S-dev only, computed from the S-dev derived tables without any per-forecast file; `REPORT.md`, "Exploratory: lead–lag" and "Exploratory: detection limit", gives the tables and the reading. Rerun: stages `lead-lag` and `detection-limit` of `scripts/reproduce.py` (seconds once the S-dev tables exist).

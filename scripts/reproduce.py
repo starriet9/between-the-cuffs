@@ -48,14 +48,22 @@ build_check.json), and each tag is checked to point at the recorded commit.
   encoder-sob  the S-ob step of the encoder check (ENCODER_PLAN.md §7), at the commit in
                results/sob/after_frozen_scoring/exploratory_encoder/MANIFEST.json, with BTC_FROZEN_SCORING=1
                  scripts/run_encoder_sob.py --jobs <workers recorded in the MANIFEST meta> --n-jobs 2
+  lead-lag     the exploratory lead-lag analysis on S-dev (EXPLORATORY_PLAN.md §1, SPEC §6.8), at the commit in
+               results/sdev/exploratory_lead_lag/MANIFEST.json
+                 scripts/run_exploratory.py lead-lag
+  detection-limit
+               the exploratory detection-limit analysis on S-dev (EXPLORATORY_PLAN.md §2), at the commit in
+               results/sdev/exploratory_detection_limit/MANIFEST.json
+                 scripts/run_exploratory.py detection-limit
 
 The encoder steps keep the worker counts of the original runs, because their result files record them.
-`freeze`, `sob` and `encoder` read the S-dev derived tables: when the data folder does not hold tables equal
-to the published ones (`inputs_sha256`), the S-dev part of `sdev` up to the tables runs first, at tag
-feature-freeze. `encoder` reads the reproduced confirmatory forecasts (stage sdev) and `encoder-sob` the
-reproduced frozen-scoring forecasts and S-ob tables (stage sob) and the S-dev encoder tables and weights
-(stage encoder); a stage whose inputs are not already in `--workdir`, with the published SHA-256, is added
-to the run. These per-forecast files are not committed (they hold VitalDB cuff values); the reproduced copy
+`freeze`, `sob`, `encoder`, `lead-lag` and `detection-limit` read the S-dev derived tables: when the data
+folder does not hold tables equal to the published ones (`inputs_sha256`), the S-dev part of `sdev` up to
+the tables runs first, at tag feature-freeze. `encoder` reads the reproduced confirmatory forecasts (stage
+sdev) and `encoder-sob` the reproduced frozen-scoring forecasts and S-ob tables (stage sob) and the S-dev
+encoder tables and weights (stage encoder); `lead-lag` and `detection-limit` read no per-forecast file. A
+stage whose inputs are not already in `--workdir`, with the published SHA-256, is added to the run. These
+per-forecast files are not committed (they hold VitalDB cuff values); the reproduced copy
 is placed, git-ignored, in the worktree of the stage that reads it, where the original script checks its
 SHA-256 against the MANIFEST. Each stage reads the committed results of the earlier stages at its own
 commit (for example `freeze` reads the committed confirmatory summary), as the original runs did; each
@@ -141,13 +149,15 @@ import tomllib
 from pathlib import Path, PurePosixPath
 
 REPO = Path(__file__).resolve().parents[1]
-STAGES = ("sdev", "freeze", "sob", "encoder", "encoder-sob")
+STAGES = ("sdev", "freeze", "sob", "encoder", "encoder-sob", "lead-lag", "detection-limit")
 ENCODER_STAGES = ("encoder", "encoder-sob")
 SOB_STAGES = ("sob", "encoder-sob")                 # run with BTC_FROZEN_SCORING=1
 SELF_EXPORTING = ("encoder", "encoder-sob")         # write their public tables themselves
 STAGE_DIR = {"sdev": "results/sdev", "freeze": "results/frozen", "sob": "results/sob",
              "encoder": "results/sdev/exploratory_encoder",
-             "encoder-sob": "results/sob/after_frozen_scoring/exploratory_encoder"}
+             "encoder-sob": "results/sob/after_frozen_scoring/exploratory_encoder",
+             "lead-lag": "results/sdev/exploratory_lead_lag",
+             "detection-limit": "results/sdev/exploratory_detection_limit"}
 COHORT_LABEL = {"sdev": "S-dev", "sob": "S-ob"}
 
 MANIFEST_SDEV = "results/sdev/MANIFEST.json"
@@ -156,6 +166,8 @@ MANIFEST_SCORE = "results/sob/frozen_scoring/MANIFEST.json"
 MANIFEST_AFTER = "results/sob/after_frozen_scoring/MANIFEST.json"
 MANIFEST_ENC = "results/sdev/exploratory_encoder/MANIFEST.json"
 MANIFEST_ENC_SOB = "results/sob/after_frozen_scoring/exploratory_encoder/MANIFEST.json"
+MANIFEST_LL = "results/sdev/exploratory_lead_lag/MANIFEST.json"
+MANIFEST_DL = "results/sdev/exploratory_detection_limit/MANIFEST.json"
 BUILD_CHECK = "results/sdev/exploratory_encoder/build_check.json"
 STATE = "results/sob/frozen_scoring/STATE.json"
 SCORING_LOG = "results/sob/frozen_scoring_log.jsonl"
@@ -178,12 +190,13 @@ NOTES = {  # committed files under results/ that no rule here reproduces, and wh
     CHECKSUMS: "the published checksum list; the downloaded arrays are compared with it",
     CHECKSUMS_SDEV: "the published S-dev checksum list; the downloaded arrays are compared with it",
 }
-STAGE_ORDER = {"sdev": 0, "sdev-data": 0, "freeze": 1, "sob": 2, "encoder": 3, "encoder-sob": 4}
+STAGE_ORDER = {"sdev": 0, "sdev-data": 0, "freeze": 1, "sob": 2, "encoder": 3, "encoder-sob": 4, "lead-lag": 5,
+               "detection-limit": 6}
 GIT_SCRUB = ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR", "GIT_OBJECT_DIRECTORY",
              "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_NAMESPACE", "GIT_PREFIX")
 TORCH_MISSING = ("the encoder stages need torch, from the dependency group `encoder` of pyproject.toml: run "
                  "`uv run --locked --group encoder scripts/reproduce.py`, or leave them out with "
-                 "--stages sdev,freeze,sob")
+                 "--stages sdev,freeze,sob,lead-lag,detection-limit")
 SHORT = 12
 
 
@@ -335,7 +348,8 @@ def stage_refs(git: Git, pub: Published, stages: list[str]) -> dict[str, Ref]:
     """The commit of each stage, from the meta of its published result; a tag must point at it."""
     spec = {"sdev": (MANIFEST_SDEV, "feature_tag"), "freeze": (MANIFEST_FROZEN, None),
             "sob": (MANIFEST_SCORE, "frozen_tag"), "encoder": (MANIFEST_ENC, None),
-            "encoder-sob": (MANIFEST_ENC_SOB, None)}
+            "encoder-sob": (MANIFEST_ENC_SOB, None), "lead-lag": (MANIFEST_LL, None),
+            "detection-limit": (MANIFEST_DL, None)}
 
     def known(commit, where):
         if git.commit_of(commit) != commit:
@@ -1032,6 +1046,17 @@ class Run:
         finally:
             self.collect(wt, "encoder-sob")
 
+    def stage_exploratory(self, stage: str, ref: Ref):
+        """EXPLORATORY_PLAN.md: one run of scripts/run_exploratory.py at the run's commit. It reads the S-dev
+        derived tables and the confirmatory summary.json and folds.csv committed there, no per-forecast file."""
+        self.wipe(stage)
+        wt = self.worktree(f"{stage}-{ref.commit[:7]}", ref.commit)
+        extra = self.jobs("--n-jobs") if stage == "detection-limit" else []
+        try:
+            self.step(stage, ref.commit, None, wt, "run_exploratory.py", stage, *extra)
+        finally:
+            self.collect(wt, stage)
+
     def export(self, done: list[str]):
         """scripts/export_public_tables.py at the commit of each committed public_tables.json (the stages that
         write their tables themselves aside)."""
@@ -1246,7 +1271,8 @@ def main(argv=None, repo: Path | None = None) -> int:
     ap.add_argument("--jobs", type=int, default=None,
                     help="parallel jobs, passed as --n-jobs to the model scripts and --jobs to build_windows.py "
                          "(default: their own defaults, as in the original runs; the results do not depend on it); "
-                         "not passed to the encoder steps, whose results record their worker counts")
+                         "not passed to the encoder steps, whose results record their worker counts, or to "
+                         "lead-lag, which runs in one process")
     ap.add_argument("--ignore-versions", action="store_true",
                     help="run even if installed package versions differ from the pins of a commit used")
     a = ap.parse_args(argv)
@@ -1291,7 +1317,9 @@ def main(argv=None, repo: Path | None = None) -> int:
     record = run.record_check()
     done = []
     runner = {"sdev": run.stage_sdev, "freeze": run.stage_freeze, "sob": run.stage_sob,
-              "encoder": run.stage_encoder, "encoder-sob": run.stage_encoder_sob}
+              "encoder": run.stage_encoder, "encoder-sob": run.stage_encoder_sob,
+              "lead-lag": lambda r: run.stage_exploratory("lead-lag", r),
+              "detection-limit": lambda r: run.stage_exploratory("detection-limit", r)}
     try:
         for s in run.stages:
             ref = run.refs[s]

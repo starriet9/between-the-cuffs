@@ -211,7 +211,9 @@ def check_registration(c: Check):
     later = git("log", "--format=%h", f"{reg_commit}..HEAD", "--", "PREREG.md", "SPEC.md").split()
     c.test(not later, f"no commit after the registration changes PREREG.md or SPEC.md{listed(later)}",
            f"git log {short(reg_commit)}..HEAD -- PREREG.md SPEC.md")
-    rows = re.findall(r"^\| `([\w.-]+)` \| `([0-9a-f]{7,40})` \| (\d{4}-\d\d-\d\d \d\d:\d\d) \|", reg, re.M)
+    # commit date in KST, optionally followed by " KST (… UTC)"
+    rows = re.findall(r"^\| `([\w.-]+)` \| `([0-9a-f]{7,40})` \| (\d{4}-\d\d-\d\d \d\d:\d\d)(?: KST \([^)]*\))? \|",
+                      reg, re.M)
     named = {t: (com, date) for t, com, date in rows}
     for t in TAGS:
         com, date = named.get(t, ("(none)", "(none)"))
@@ -514,7 +516,7 @@ def check_documents(c: Check):
            "README.md")
     c.test(hypotension_line({"Non-cesarean": hyp["S-dev"], "Cesarean": hyp["S-ob"]}) in plain,
            "README.md hypotension line = the line rendered from the two hypotension.csv files", "README.md")
-    m = re.search(r"(\d+) deviations? from the registration", plain)
+    m = re.search(r"(\d+) (?:minor )?deviations? from the registration", plain)
     c.test((int(m.group(1)) if m else 0) == n_dev, f"README.md registration line: "
            f"{m.group(0) if m else 'no deviation note'}; REPORT.md lists {n_dev}", "README.md", "REPORT.md#deviations")
     c.test(gb_line in plain if gb_line else "gave a different answer" not in plain,

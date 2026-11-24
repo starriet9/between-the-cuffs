@@ -183,7 +183,8 @@ figure.wide { margin: 8px 0 8px; }
   .answer { font-size: 17px; line-height: 26px; }
   .cesarean { font-size: 15px; line-height: 23px; }
   .registration { flex-direction: column; align-items: flex-start; font-size: 13px; line-height: 20px; row-gap: 0; }
-  .registration .sep { flex: none; width: 1px; height: 10px; margin: 0 0 0 3.5px; }
+  .registration .sep { display: none; }   /* stacked items need no connector */
+  .registration .node { margin: 1px 0; }
   .registration .sep-gap { height: 8px; }
   .summary-second { display: block; margin-top: 12px; }
   .result-full { font-size: 14px; line-height: 22px; }

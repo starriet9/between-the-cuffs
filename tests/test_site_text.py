@@ -82,7 +82,7 @@ def test_variants_change_only_what_they_should(rendered):
     for v, (site, md, html) in rendered.items():
         gb = "An exploratory gradient-boosting check on the same inputs gave a different answer"
         assert (gb in md and gb in html) == (v == "row6-gb")
-        dev = "deviations from the registration, listed in"
+        dev = "deviations from the registration, none changing an analysis, listed in"
         assert (dev in md) == (v == "row3-deviation")
     assert "Heart rate alone met the rule (6.1%)." in rendered["row6-hr"][0].headline.answer_rest
     assert "Gains larger than" not in rendered["row6-raised"][0].headline.answer_rest

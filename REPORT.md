@@ -4,7 +4,17 @@ This file gives the confirmatory result on the non-cesarean cases, how to read i
 
 Two cohorts are used. **S-dev** is the development cohort: the non-cesarean spinal cases, on which every model is fitted and cross-validated. The answer to the question comes from S-dev. **S-ob** is the cesarean cohort: an external case series, scored once with the frozen models.
 
-**Contents.** [How to read these numbers](#how-to-read-these-numbers) · [What the forecasts are scored on](#what-the-forecasts-are-scored-on) · [Reading the result](#reading-the-result) · [Confirmatory result, S-dev](#confirmatory-result-s-dev) · [Cesarean cases (S-ob)](#cesarean-cases-s-ob) · [Secondary analyses (S-dev)](#secondary-analyses-s-dev) · [Gradient-boosting check](#gradient-boosting-check-specmd-68) · [Limits](#limits) · [Deviations](#deviations) · [Reproducibility](#reproducibility-specmd-10) · [Exploratory encoder check](#exploratory-pretrained-encoder-check-encoder_planmd)
+**At a glance** (a summary of the sections below; every number is in them):
+
+- **Answer (registered): no.** In 200 non-cesarean spinal cases, heart rate and pleth waveform features did not lower next-reading MAP forecast error beyond the cuff-only model (8.67 vs 8.68 mmHg; rule: at least 5%, with the 95% CI excluding zero). In 19 cesarean cases, scored once with frozen models: 0.0%, a case series.
+- **The same answer from other angles:** a gradient-boosting model (−0.04%), h replaced by the median previous interval (+0.028 mmHg), the fast-cycling cases (0.3%), and the withheld-cuff yardstick, where one extra cuff reading lowers the error by 1.94 mmHg and the added signals recover none of it.
+- **What the pipeline could have found** (exploratory): with a planted signal worth about 5% of the error, the 95% CI of the gain excluded zero in 10 of 10 draws; the 5% rule itself was met reliably from about 10%.
+- **Do the features move with MAP within a patient?** Barely: within-case correlations of feature changes with MAP changes lie between −0.07 and 0.10 (exploratory lead–lag).
+- **How predictable the next reading is at all:** the cuff-only model beats "repeat the last reading" by 4.7%; new-onset readings below 80% of baseline were flagged one reading ahead in 5–11%.
+- **Main limits:** no dose times, a record-start baseline, forecasts scored at the realised time of the next reading ("What the forecasts are scored on").
+- **Deviations:** two minor ones, neither changing an analysis.
+
+**Contents.** [How to read these numbers](#how-to-read-these-numbers) · [What the forecasts are scored on](#what-the-forecasts-are-scored-on) · [Reading the result](#reading-the-result) · [Confirmatory result, S-dev](#confirmatory-result-s-dev) · [Cesarean cases (S-ob)](#cesarean-cases-s-ob) · [Secondary analyses (S-dev)](#secondary-analyses-s-dev) · [Gradient-boosting check](#gradient-boosting-check-specmd-68) · [Limits](#limits) · [Deviations](#deviations) · [Reproducibility](#reproducibility-specmd-10) · [Exploratory encoder check](#exploratory-pretrained-encoder-check-encoder_planmd) · [Lead–lag](#exploratory-leadlag-of-feature-and-map-changes-exploratory_planmd-1) · [Detection limit](#exploratory-detection-limit-of-the-registered-pipeline-exploratory_planmd-2)
 
 **Status of this version** (written after the cesarean scoring and the secondary analyses; times in KST unless marked UTC):
 
@@ -17,6 +27,7 @@ Two cohorts are used. **S-dev** is the development cohort: the non-cesarean spin
 | 6. Models frozen | done; commit `ea852f0`, 2026-11-23 04:29; public release 2026-11-22 19:37:25 UTC (tag `models-frozen`) |
 | 7. S-ob scored once | done, 2026-11-23 04:38 (2026-11-22 19:38:48 UTC), at tag `models-frozen`; see "Cesarean cases (S-ob)" |
 | 8. Remaining analyses and replays | S-ob analyses after the frozen scoring: done, 2026-11-23 04:39, at tag `models-frozen`. S-dev secondary analyses and gradient-boosting check: done, 2026-11-23 04:50, at tag `feature-freeze` (see "Secondary analyses (S-dev)"). Per-case series for the replays and the case browser: written 2026-11-23 04:39, at tag `models-frozen` (log event `site_cases_written`) |
+| Exploratory lead–lag and detection limit (`EXPLORATORY_PLAN.md`) | done 2026-11-24, S-dev only; plan committed before either was run; see the last two sections |
 | Exploratory encoder check (`SPEC.md` §6.8) | done 2026-11-23: S-dev run at `d66ad63`, cesarean appendix run once at `dda1d6d`; rule not met; see "Exploratory pretrained-encoder check" |
 
 ## Why it matters
@@ -34,11 +45,11 @@ After a spinal, the cuff reads blood pressure every 1–5 minutes, and pressure 
 
 Version 1.5 replaced version 1.4 before any model was fitted; `PREREG.md` §11 lists the changes. This is a self-registration by git commit. The dates in the table are commit dates, which the author sets. The `published_at` time of each GitHub release is set by GitHub's server; it can be read on the repository's [Releases page](https://github.com/starriet9/between-the-cuffs/releases) or from the GitHub releases API, in UTC. Other dates in this repository are Korea Standard Time (KST, UTC+9) unless marked. The version 1.5 text was first committed locally on 2026-11-20 and amended on 2026-11-21, before its first push, to add the neuromuscular-blocker rule and the reviewer-guide clause; only the pushed commit is the registration. No archive snapshot was made.
 
-| Tag | Commit | Commit date (set by the author, KST) | Release published (set by GitHub, UTC) |
+| Tag | Commit | Commit date (set by the author; KST, and UTC) | Release published (set by GitHub, UTC) |
 |---|---|---|---|
-| `prereg-v1.5` | `59939b7` | 2026-11-21 02:58 | 2026-11-22 11:50:39 |
-| `feature-freeze` | `0669d0c` | 2026-11-21 02:58 | 2026-11-22 11:53:08 |
-| `models-frozen` | `ea852f0` | 2026-11-23 04:29 | 2026-11-22 19:37:25 |
+| `prereg-v1.5` | `59939b7` | 2026-11-21 02:58 KST (2026-11-20 17:58 UTC) | 2026-11-22 11:50:39 |
+| `feature-freeze` | `0669d0c` | 2026-11-21 02:58 KST (2026-11-20 17:58 UTC) | 2026-11-22 11:53:08 |
+| `models-frozen` | `ea852f0` | 2026-11-23 04:29 KST (2026-11-22 19:29 UTC) | 2026-11-22 19:37:25 |
 
 **What these records can and cannot show.** GitHub's records show that the registration and the feature tag were public before any result file was: the result files are first published with tag `models-frozen`. They also show that the `models-frozen` release was public before the cesarean scoring started (19:38:48 UTC in `results/sob/frozen_scoring_log.jsonl`; see "Scoring record"). They cannot show when a model was first fitted. The author's record is this: the confirmatory run (`SPEC.md` §9 step 5) was made on 2026-11-22 at 21:55 KST (12:55 UTC), about an hour after both releases; and no model was fitted to real data before that run, because earlier runs of the model code used synthetic data only (`btc/models/synthetic.py`, `tests/`). The result files hold no timestamps, so the run time comes from local file times and cannot be checked from the repository.
 
@@ -81,6 +92,7 @@ Terms used below. MAP is mean arterial pressure. The pleth is the pulse-oximeter
 - **Timing.** Each forecast is issued at a cuff reading and scored at the time the next reading was actually taken. That interval, h, is an input of every model (`SPEC.md` §3) and is the one input not known when the forecast is issued, so these are forecasts conditional on the next reading's time, not real-time forecasts. With h replaced by the median of the patient's previous intervals ("Refitted variants and the feature-group ablation", S-dev), M4 vs M2 is +0.028 mmHg (95% CI 0.004 to 0.056; relative reduction −0.32%): the added signals did not help there either. Prospective scoring is part of the next experiment (`README.md`).
 - **The cuff-only structure.** The M2 structure was chosen among four on the S-dev outer-fold predictions (`SPEC.md` §4.1; "M2 structure") and is shared by M3, M4 and their placebo versions. The choice can make the absolute errors slightly optimistic; it enters both sides of the M4 vs M2 contrast [judgment]. Choosing the structure inside each outer training fold would remove that optimism.
 - **What the interval covers.** The subject bootstrap treats the fitted fold models as fixed (`SPEC.md` §6.2). Across ten fold seeds, Δ ranged from −0.004 to 0.026 mmHg ("Fold-seed sensitivity"), about the width of the CI, so the bound describes this fitted procedure at these folds, not the information the signals hold.
+- **What the procedure can detect.** A planted signal worth about 5% of the error gave a gain whose 95% CI excluded zero in 10 of 10 draws, and the cross-validation kept that block with small penalties ("Exploratory: detection limit"). So the shrinkage of the real signals is not automatic: the procedure keeps a block that helps.
 
 ### Reading the result
 
@@ -897,13 +909,15 @@ Python 3.13.15 (`.python-version`); every imported package is pinned exactly in 
 
 ## Deviations
 
-None: no deviation from the registered protocol (`PREREG.md`, `SPEC.md`). The list was checked again on 2026-11-23, after the cesarean scoring, the secondary analyses and the exploratory encoder check.
+Two minor deviations, neither of which changes an analysis, a registered number or a registered sentence (checked again on 2026-11-24):
 
-### Changes after registration that are not protocol deviations
+- **README paragraphs outside the registered blocks, at tag `models-frozen`.** `SPEC.md` §8.1 limits the README to its blocks. The interim `README.md` at that tag also held two explanatory paragraphs ("Why it matters" and "How to read these numbers"). They were moved to this file on 2026-11-23, in the update that adds the cesarean result, so that `README.md` now holds only its blocks.
+- **Exploratory encoder check built alongside the required outputs.** `SPEC.md` §6.8 says that the check "is built only if everything else is finished". It was built alongside the web page and this file, on 2026-11-23. Every required output was finished and checked before any result of the check was published; before its plan was written, the confirmatory result and the frozen models were under the public tag `models-frozen`, and the cesarean cases had been scored once (commit `44cfb63`, pushed together with the plan). The plan, `ENCODER_PLAN.md`, was committed and pushed before any encoder output was computed.
+
+## Changes after registration that are not deviations
 
 Changes to implementation, presentation and record-keeping made after registration, each with its reason:
 
-- **README paragraphs moved to this file.** At tag `models-frozen`, `README.md` had two short paragraphs outside the blocks of `SPEC.md` §8.1: "Why it matters" and "How to read these numbers". They were moved to this file on 2026-11-23, in the update that adds the cesarean result to `README.md`, so that `README.md` holds only its blocks. Both are labelled as not pre-specified.
 - **Secondary analyses run after the cesarean scoring, in a clone.** The S-dev secondary analyses and the gradient-boosting check ran at 04:50 KST on 2026-11-23, after the S-ob scoring (04:38), in a separate clone at tag `feature-freeze`. `SPEC.md` §9 step 8 allows this order. The run re-created the 11 confirmatory files byte-identical, so it is a rerun with unchanged code. Its manifest replaced `results/sdev/MANIFEST.json`, with `meta` and the 11 earlier entries unchanged ("Secondary analyses (S-dev)").
 - **Order of the two gradient-boosting runs.** The S-ob appendix (04:39) was computed before the S-dev check (04:50). `SPEC.md` §9 step 8 says that the check runs on S-dev after step 5 and on S-ob after step 7; it fixes no order between the two.
 - **S-ob signal-quality summary run after the scoring.** `scripts/pleth_coverage.py --cohort sob` was not part of the scoring run. It ran on 2026-11-23 at 12:30 KST, at commit `442c405`, with `BTC_FROZEN_SCORING=1`, as its docstring requires, and its numbers are labelled as computed after the frozen scoring. The waveform coverage of Sentence 2 comes from the scoring itself.
@@ -913,7 +927,6 @@ Changes to implementation, presentation and record-keeping made after registrati
 - **`after` and `series` ran with `results/sob/` untracked.** Their `meta` records `state` "dirty" (`results/sob/after_frozen_scoring/MANIFEST.json`; the series files are VitalDB-derived and not committed) because the scoring's own outputs were not yet committed. The guard allows untracked files inside `results/` only ("Scoring record").
 - **Scope of the S-ob sensitivity scoring.** The scoring on all analysable cases covers the ladder and its placebo versions, not the yardstick models. `SPEC.md` §9 step 7 says that the frozen models are also scored on all analysable cases; `SPEC.md` §6.7 defines this sensitivity analysis for M2–M4.
 - **S-ob counts differ from G0.** Under the final rule, 19 cases are analysed, not 20; case 4147 has 2 valid readings in the window, not 3; and the hypotension events are counted among the scored at-risk forecasts, not among all readings ("Cohort flow, S-ob"). The recount at the scoring is registered (`SPEC.md` §2.2).
-- **Encoder check built alongside the site and this report.** `SPEC.md` §6.8 says that the pretrained-encoder check "is built only if everything else is finished". This is a rule of priority for an optional item: it keeps the optional check from taking time from the required outputs. The check was built alongside the web page and this file, on 2026-11-23. Every required output was finished and checked before any result of the check was published; they are published together. Before the plan was written, the confirmatory result and the frozen models were under the public tag `models-frozen`, and the cesarean cases had been scored once (commit `44cfb63`, pushed together with the plan). The plan, `ENCODER_PLAN.md`, was committed and pushed before any encoder output was computed, and its stop rule (§10: a clock cut-off of 2026-11-24 12:00 KST) was not reached. The check is exploratory, may be omitted (`SPEC.md` §6.8), and changes no registered outcome, rule or sentence. It concerns the order of work on an optional item, not an analysis, so it is listed here.
 - **README and web-page presentation.** Within the blocks of `SPEC.md` §8.1, the README gives each table row a short description of the model in the model column, states the time zone of its dates, heads block 2 "What this means (written before the result)" (the two paragraphs are in `btc/site/text.py` at tag `feature-freeze`), adds "How to read these numbers" (a link into this file) to the line of links, and puts the author line in the Credit block. The web page repeats README block 1 word for word, as `SPEC.md` §8.3 requires, and adds a header with the author's name, a "Check it yourself" list of links, figure captions, a "Last updated" date, and the case browser. The README's table labels its last row "Waveform coverage" with a short description. The case browser shows whether phenylephrine and ephedrine were charted for each case, not the amounts, which are VitalDB case-table values (`SPEC.md` §2.1).
 - **Deliverables that may follow.** `WHY.md`, the narrated replay and the one-page PDF are not added; `SPEC.md` §8.3 allows them after the results are posted.
 - **Optional exploratory analyses not run.** The whole-record window, the 3-reading-ahead targets, lead–lag, within-case relative amplitude, the S-dev AUROC and the leave-one-patient-out refit inside S-ob were not run. `SPEC.md` §6.8 allows them to be omitted.
@@ -1002,6 +1015,62 @@ Contrasts from `results/sob/after_frozen_scoring/exploratory_encoder/contrasts.c
 **Departures from `ENCODER_PLAN.md`.**
 - The S-dev embeddings were built twice. The first build's log recorded the torch settings of the parent process instead of the workers'; the record was fixed (commit `a07e0d2`) and the embeddings were rebuilt before any blood-pressure model was fitted. Both builds gave byte-identical arrays.
 - The S-ob code was written after the S-dev result was known (above), and the S-ob fast-cycling row is omitted.
+
+## Exploratory: lead–lag of feature and MAP changes (`EXPLORATORY_PLAN.md` §1)
+
+Exploratory, computed on 2026-11-24 after the registered results were known; S-dev only. `SPEC.md` §6.8 lists this item ("Lead–lag between feature changes and the cuff MAP change"); its details were fixed in `EXPLORATORY_PLAN.md`, committed (`35d4e17`) before it was run. It cannot change any registered outcome. Source: `results/sdev/exploratory_lead_lag/`.
+
+Within-case (case-centred, pooled) Pearson correlation of each feature's change at a reading with the cuff MAP change: concurrent (MAP_r − MAP_{r−1}), next (MAP_{r+1} − MAP_r, the change the forecast targets), and the part of the next change that the cross-validated M2 missed ("next_residual_m2"). A case enters with at least 3 usable pairs. 95% intervals from the primary outcome's subject bootstrap (2,000 resamples, seed 20261118); the P1 donor features are the placebo. Expectation stated in the plan, not a claim: pulse arrival time (pat) shortens when blood pressure rises.
+
+| Feature | MAP change | Real r (95% CI) | Cases / pairs | P1 r (95% CI) | Cases / pairs | Real − P1 (95% CI) |
+|---|---|---|---|---|---|---|
+| hr_level | concurrent | 0.102 (0.019 to 0.185) | 191 / 1326 | 0.027 (−0.042 to 0.098) | 191 / 1293 | 0.075 (−0.036 to 0.190) |
+| hr_level | next | −0.074 (−0.128 to −0.017) | 191 / 1326 | −0.009 (−0.082 to 0.074) | 191 / 1293 | −0.065 (−0.165 to 0.026) |
+| hr_level | next_residual_m2 | −0.049 (−0.105 to 0.010) | 191 / 1326 | −0.008 (−0.081 to 0.074) | 191 / 1293 | −0.040 (−0.142 to 0.054) |
+| pat | concurrent | −0.071 (−0.144 to 0.003) | 197 / 1350 | 0.006 (−0.054 to 0.065) | 194 / 1347 | −0.077 (−0.161 to 0.006) |
+| pat | next | 0.028 (−0.028 to 0.086) | 197 / 1350 | −0.048 (−0.123 to 0.023) | 194 / 1347 | 0.076 (−0.016 to 0.176) |
+| pat | next_residual_m2 | 0.010 (−0.045 to 0.066) | 197 / 1350 | −0.052 (−0.128 to 0.018) | 194 / 1347 | 0.062 (−0.029 to 0.166) |
+| rise | concurrent | −0.027 (−0.110 to 0.063) | 198 / 1360 | 0.063 (−0.007 to 0.129) | 197 / 1369 | −0.090 (−0.199 to 0.031) |
+| rise | next | 0.088 (0.009 to 0.161) | 198 / 1360 | −0.041 (−0.119 to 0.045) | 197 / 1369 | 0.129 (−0.004 to 0.246) |
+| rise | next_residual_m2 | 0.083 (0.007 to 0.151) | 198 / 1360 | −0.044 (−0.121 to 0.041) | 197 / 1369 | 0.127 (0.001 to 0.240) |
+| width | concurrent | 0.018 (−0.059 to 0.095) | 198 / 1360 | −0.022 (−0.085 to 0.043) | 197 / 1369 | 0.041 (−0.076 to 0.148) |
+| width | next | 0.051 (−0.018 to 0.121) | 198 / 1360 | −0.030 (−0.086 to 0.025) | 197 / 1369 | 0.081 (−0.012 to 0.176) |
+| width | next_residual_m2 | 0.042 (−0.023 to 0.110) | 198 / 1360 | −0.043 (−0.093 to 0.011) | 197 / 1369 | 0.084 (−0.005 to 0.173) |
+| bav | concurrent | 0.075 (0.023 to 0.129) | 198 / 1360 | 0.026 (−0.029 to 0.082) | 197 / 1369 | 0.050 (−0.019 to 0.117) |
+| bav | next | −0.014 (−0.064 to 0.033) | 198 / 1360 | 0.022 (−0.041 to 0.083) | 197 / 1369 | −0.036 (−0.116 to 0.045) |
+| bav | next_residual_m2 | −0.008 (−0.055 to 0.040) | 198 / 1360 | 0.025 (−0.037 to 0.086) | 197 / 1369 | −0.032 (−0.111 to 0.050) |
+
+All 30 correlations lie between −0.074 and 0.102. Pulse arrival time's concurrent correlation is −0.071 (95% CI −0.144 to 0.003), the expected sign with an interval that includes zero. Against the part of the next change that M2 missed, only rise time's interval excludes zero (0.083), and it is the only one of the 15 real-minus-placebo differences whose interval excludes zero (0.127, 95% CI 0.001 to 0.240). Thirty correlations and fifteen differences with unadjusted intervals are descriptive; a correlation is not an increment over the cuff.
+
+## Exploratory: detection limit of the registered pipeline (`EXPLORATORY_PLAN.md` §2)
+
+Exploratory and new (post hoc), computed on 2026-11-24 after the registered results were known; S-dev only; plan committed (`35d4e17`) before it was run. It tests the fitting procedure on the real S-dev design, not the physiology. Source: `results/sdev/exploratory_detection_limit/`.
+
+A synthetic column is planted in the waveform block: the target change plus patient-scaled noise, at strengths chosen so that an oracle using it would lower the error by about 0, 1, 2, 3, 5, 10 and 20% (nominal q). Everything else is the registered chain M2 → M3 → M4 with the same folds, penalty grid, tie rule and bootstrap; the re-derived M2 and M3 are bit-identical to the confirmatory ones. Main draw (noise seed 20261118):
+
+| Nominal q | Oracle reduction (95% CI) | M4+planted vs M2: relative reduction (95% CI) | Δ, mmHg (95% CI) | CI of Δ below 0 | Meets rule | Waveform penalty, folds 0–4 |
+|---|---|---|---|---|---|---|
+| 0% | 0.00% (0.00% to 0.00%) | −0.03% (−0.43% to 0.35%) | 0.003 (−0.031 to 0.036) | no | no | 3.16, 3.16, 3.16, 3.16, 10 |
+| 1% | 1.78% (0.83% to 2.68%) | 1.49% (0.40% to 2.53%) | −0.130 (−0.227 to −0.033) | yes | no | 1, 1, 1, 1, 1 |
+| 2% | 3.05% (1.73% to 4.33%) | 2.46% (1.02% to 3.81%) | −0.213 (−0.340 to −0.086) | yes | no | 1, 1, 1, 0.316, 1 |
+| 3% | 4.23% (2.65% to 5.80%) | 3.49% (1.77% to 5.12%) | −0.302 (−0.453 to −0.148) | yes | no | 1, 0.316, 0.316, 0.316, 1 |
+| 5% | 6.46% (4.50% to 8.38%) | 5.75% (3.64% to 7.81%) | −0.499 (−0.691 to −0.303) | yes | yes | 0.316, 0.316, 0.316, 0.316, 0.316 |
+| 10% | 11.61% (9.09% to 14.18%) | 10.59% (8.08% to 13.06%) | −0.918 (−1.162 to −0.678) | yes | yes | 0.316, 0.316, 0.316, 0.316, 0.316 |
+| 20% | 21.26% (18.12% to 24.28%) | 19.82% (16.71% to 22.90%) | −1.719 (−2.042 to −1.404) | yes | yes | 0.1, 0.1, 0.1, 0.1, 0.316 |
+
+For comparison, the registered M4's waveform-block penalties were 10, 1000, 10, 3.16 and 10. Ten further noise draws (the main draw's oracle reductions were among the largest of the eleven at 1–3%):
+
+| Nominal q | Draws meeting the rule | Draws with CI of Δ below 0 | Relative reduction, min / median / max |
+|---|---|---|---|
+| 0% | 0 of 10 | 0 of 10 | −0.38% / −0.16% / 0.01% |
+| 1% | 0 of 10 | 0 of 10 | −0.14% / 0.14% / 0.74% |
+| 2% | 0 of 10 | 1 of 10 | −0.08% / 0.94% / 1.73% |
+| 3% | 0 of 10 | 7 of 10 | 0.30% / 1.70% / 3.28% |
+| 5% | 1 of 10 | 10 of 10 | 1.30% / 3.69% / 5.68% |
+| 10% | 10 of 10 | 10 of 10 | 5.25% / 8.76% / 11.19% |
+| 20% | 10 of 10 | 10 of 10 | 14.15% / 18.41% / 21.55% |
+
+Reading: a waveform block worth about 5% of the error (median oracle reduction 4.6% over the ten draws) gave a gain whose 95% CI excluded zero in 10 of 10 draws, and cross-validation kept the block with penalties of 0.316–1 instead of shrinking it away. The registered rule (at least 5% with the CI excluding zero) was met in 1 of 10 draws at that strength and in 10 of 10 from about 10%. The real data gave −0.11% (95% CI −0.38% to 0.16%).
 
 ---
 

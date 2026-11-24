@@ -229,7 +229,7 @@ def _static_case(a, s, lim, style):
     ax = a["map"]
     b80 = 0.8 * s.baseline_map
     for yv, lab in ((65.0, "65 mmHg"), (b80, "80% of record-start baseline")):
-        ax.axhline(yv, color=INK_2, lw=px(1), ls=(0, (4, 3)), zorder=1)
+        ax.axhline(yv, color=MUTE, lw=px(1), ls=(0, (1, 2.5)), zorder=1)   # dotted: not a forecast
     # labels at the right end of each line, in the margin; nudged apart if the two lines are close
     lo, hi = lim["map"]
     ypx = ax.get_position().height * ax.figure._css[1]
@@ -331,7 +331,7 @@ def case_key(fig, x, y, style, ncol=4):
                Line2D([], [], color=MUTE, lw=px(style.lw_m2), ls=(0, (4, 2.5))),
                Line2D([], [], color=ACCENT, lw=px(style.lw_m4)),
                Patch(facecolor=ACCENT, alpha=0.18, lw=0)]
-    labels = ["cuff reading", "forecast, cuff only", "forecast, + HR + pleth", "90% interval"]
+    labels = ["cuff reading", "forecast, cuff only (hidden under blue)", "forecast, + HR + pleth", "90% interval"]
     fig.legend(handles, labels, loc="upper left", bbox_to_anchor=(x / W, 1 - y / H), ncol=ncol, frameon=False,
                fontsize=px(style.tick), handlelength=1.9, handletextpad=0.5, columnspacing=1.3, borderaxespad=0,
                borderpad=0, labelcolor=INK_2)
@@ -390,7 +390,7 @@ def _ci_text(r) -> str:
 
 
 def result_panel(fig, site, x0, x1, top, bottom, style: Style):
-    """Relative reduction vs M2 with 95% CIs: filled = S-dev (decides), hollow = S-ob (case series)."""
+    """Relative reduction vs M2 with 95% CIs: filled = S-dev (primary), hollow = S-ob (case series)."""
     k = style.tick / 12
     num_w = 140 * k
     ftext(fig, x0, top, "Primary result: error reduction vs cuff only, 95% CI", style.title, fontweight="semibold", color=INK)
@@ -438,7 +438,7 @@ def result_panel(fig, site, x0, x1, top, bottom, style: Style):
     h = site.headline
     handles = [Line2D([], [], ls="none", marker="o", ms=px(9 * k), mfc=INK_2, mec=INK_2),
                Line2D([], [], ls="none", marker="o", ms=px(9 * k), mfc=BG, mec=INK_2, mew=px(1.6 * k))]
-    labels = [f"{h.N} non-cesarean cases (decides)", f"{h.n} cesarean cases (case series)"]
+    labels = [f"{h.N} non-cesarean cases (primary)", f"{h.n} cesarean cases (case series)"]
     Wc, Hc = fig._css
     fig.legend(handles, labels, loc="lower left", bbox_to_anchor=(x0 / Wc, 1 - (bottom - 2) / Hc), ncol=1,
                frameon=False, fontsize=px(style.tick), handletextpad=0.4, borderaxespad=0, borderpad=0,
@@ -537,10 +537,10 @@ def per_patient_figure(site, path: Path, synthetic: bool):
         ax.plot(np.repeat(xs[None, :], len(rest), 0).ravel(), rest.to_numpy().ravel(), ls="none", marker="o",
                 ms=px(3), mfc=MUTE, mec="none", alpha=min(1, alpha * 1.6), zorder=2)
         for c in mark:
-            ax.plot(xs, wide.loc[c].to_numpy(), color=CERCLAGE, lw=px(1.4), marker="o", ms=px(4), mfc=CERCLAGE,
+            ax.plot(xs, wide.loc[c].to_numpy(), color=CERCLAGE, lw=px(0.9), marker="o", ms=px(2.5), mfc=CERCLAGE,
                     mec="none", zorder=3)
         if mark:
-            key = Line2D([], [], color=CERCLAGE, lw=px(1.4), marker="o", ms=px(4), mfc=CERCLAGE, mec="none")
+            key = Line2D([], [], color=CERCLAGE, lw=px(0.9), marker="o", ms=px(2.5), mfc=CERCLAGE, mec="none")
             fig.legend([key], [f"cerclage ({len(mark)})"], loc="upper right",
                        bbox_to_anchor=((x0 + pw - 28) / W, 1 - 14 / Hh), frameon=False, fontsize=px(DESKTOP.tick),
                        handlelength=1.9, handletextpad=0.5, borderaxespad=0, borderpad=0, labelcolor=INK_2)

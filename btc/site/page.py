@@ -97,10 +97,11 @@ def block1_html(b, site, links, assets) -> str:
     left, right = assets["img/summary-left.png"], assets["img/summary-right.png"]
     picture = (
         '<a class="summary-link" href="#cases" aria-label="Summary figure; go to all cesarean cases">'
-        f'<picture><source media="(max-width: 720px)" srcset="assets/img/summary-left.png" width="{left[0]}" '
-        f'height="{left[1]}">{_img("assets/img/summary.png", wide, fig.extra["alt"], "summary-main")}</picture>'
+        # on a phone the primary result (right panel) comes first, then the illustrative case
+        f'<picture><source media="(max-width: 720px)" srcset="assets/img/summary-right.png" width="{right[0]}" '
+        f'height="{right[1]}">{_img("assets/img/summary.png", wide, fig.extra["alt"], "summary-main")}</picture>'
         f'<picture class="summary-second"><source media="(min-width: 721px)" srcset="{TRANSPARENT_GIF}" width="1" '
-        f'height="1">{_img("assets/img/summary-right.png", right, "", "summary-right")}</picture></a>')
+        f'height="1">{_img("assets/img/summary-left.png", left, "", "summary-right")}</picture></a>')
     links_line = segs_html(u["links"].segs, links)
     links_line += (' <button type="button" class="copy" data-copy="' + e(site.config.reproduce_command)
                    + '" data-noparity hidden>Copy</button>')
@@ -242,7 +243,7 @@ def case_article(site, c, assets, rules) -> str:
 def check_html(site) -> str:
     c = site.config
     dev = ("Deviations: none, see REPORT.md" if c.deviations == 0 else
-           f"Deviations: {c.deviations}, listed in REPORT.md")
+           f"Deviations: {c.deviations} minor, none changing an analysis, listed in REPORT.md")
     items = [(c.registration_url, f"Registration commit ({c.registration_commit}, {c.registered_date})"),
              (c.frozen_url, f"Frozen-model tag ({c.frozen_tag}, {c.frozen_date})"),
              (c.blob("REPORT.md"), dev), (c.tree("tests"), "Tests"), (c.blob(c.checksums_path), "Data checksums")]

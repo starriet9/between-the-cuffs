@@ -6,7 +6,7 @@
 
 In the 19 cesarean cases (external, frozen models): 0.0% (95% CI −0.4% to 0.4%); this is a case series and neither confirms nor refutes the answer above.
 
-[Pre-registered](PREREG.md) on 2026-11-21 (public release 2026-11-22), before any model was fitted · models frozen [2026-11-23](https://github.com/starriet9/between-the-cuffs/tree/models-frozen) · cesarean cases scored once on [2026-11-23](https://github.com/starriet9/between-the-cuffs/tree/44cfb63); dates in KST (UTC+9) · placebo control · open data ([VitalDB](https://vitaldb.net/))
+[Pre-registered](PREREG.md) on 2026-11-21 (public release 2026-11-22), before any model was fitted · models frozen [2026-11-23](https://github.com/starriet9/between-the-cuffs/tree/models-frozen) · cesarean cases scored once on [2026-11-23](https://github.com/starriet9/between-the-cuffs/tree/44cfb63); dates in KST (UTC+9) · 2 minor deviations from the registration, none changing an analysis, listed in [REPORT.md](REPORT.md) · placebo control · open data ([VitalDB](https://vitaldb.net/))
 
 ![Left, an illustrative case: one cesarean case (VitalDB case 6187, chosen by a pre-set rule) with cuff readings, forecasts, heart rate and pleth. Right, the primary result: error reduction against the cuff-only model, with 95% CIs, in the 200 non-cesarean cases (filled) and the cesarean case series (hollow).](docs/assets/img/summary.png)
 

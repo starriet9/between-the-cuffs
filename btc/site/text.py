@@ -155,7 +155,7 @@ def registration_nodes(site) -> list:
     ]
     if c.deviations:
         k = int(c.deviations)
-        nodes.append([t(f"{k} deviation{'s' if k != 1 else ''} from the registration, listed in "),
+        nodes.append([t(f"{k} minor deviation{'s' if k != 1 else ''} from the registration, none changing an analysis, listed in "),
                       Seg("link", "REPORT.md", "report")])
     chips = [[t("placebo control")], [t("open data ("), Seg("link", "VitalDB", "vitaldb"), t(")")]]
     return nodes, chips
@@ -180,6 +180,13 @@ def links_line(site) -> list:
     return out
 
 
+def verdict_emphasis(h) -> list:
+    """Emphasis on the verdict phrase only, not on the bound's percentage (a style choice; the words are unchanged)."""
+    if h.row != 6:
+        return h.emphasis
+    return [e for e in h.emphasis if not e.rstrip().endswith("%")]
+
+
 def block1(site) -> Block:
     h = site.headline
     nodes, chips = registration_nodes(site)
@@ -191,8 +198,8 @@ def block1(site) -> Block:
     rule1 = site.featured.get(1)
     units = [
         Unit("question", [t(h.question)]),
-        Unit("answer", [Seg("b", h.label), t(" ")] + emphasised(h.answer_rest, h.emphasis),
-             {"label": h.label, "rest": emphasised(h.answer_rest, h.emphasis)}),
+        Unit("answer", [Seg("b", h.label), t(" ")] + emphasised(h.answer_rest, verdict_emphasis(h)),
+             {"label": h.label, "rest": emphasised(h.answer_rest, verdict_emphasis(h))}),
         Unit("cesarean", [t(h.cesarean_line)]),
         Unit("registration", reg, {"nodes": nodes, "chips": chips}),
         Unit("figure", [], {"alt": SUMMARY_ALT.format(cid=rule1, N=h.N), "img": "img/summary.png"}),
@@ -279,7 +286,7 @@ def _charted(v) -> str:
     """Whether a chart total is present, without the amount (the amounts are VitalDB data)."""
     if v is None:
         return "not recorded"
-    return "recorded" if v > 0 else "none recorded"
+    return "charted (amount not shown)" if v > 0 else "none charted"
 
 
 def phenylephrine_text(c) -> str:

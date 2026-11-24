@@ -23,10 +23,10 @@ def test_facts_keep_ug_and_mg_apart():
             for v in vals:
                 assert not ("µg" in v and checks.MG.search(v)), v
             if label.startswith("Phenylephrine"):       # presence only: the amounts are VitalDB data
-                assert vals == [T.phenylephrine_text(c)] and vals[0] in ("recorded", "none recorded", "not recorded")
+                assert vals == [T.phenylephrine_text(c)] and vals[0] in ("charted (amount not shown)", "none charted", "not recorded")
                 seen_ug = True
             if label.startswith("Ephedrine"):
-                assert vals == [T.ephedrine_text(c)] and vals[0] in ("recorded", "none recorded", "not recorded")
+                assert vals == [T.ephedrine_text(c)] and vals[0] in ("charted (amount not shown)", "none charted", "not recorded")
                 seen_mg = True
     assert seen_ug and seen_mg
 
